@@ -20,6 +20,12 @@ rule browsedata
 
 
 #Build steps
+build CAN_HLC.pbi : index CAN_HLC.xcl
+build CAN_NMT.pbi : index CAN_NMT.xcl
+build CANOpen.pbi : index CANOpen.xcl
+build CANOpen_batch.pbi : index CANOpen_batch.xcl
+build CANOpen_hw_appl.pbi : index CANOpen_hw_appl.xcl
+build CANOpen_var.pbi : index CANOpen_var.xcl
 build main.pbi : index main.xcl
 build stm32f4xx_hal_msp.pbi : index stm32f4xx_hal_msp.xcl
 build stm32f4xx_it.pbi : index stm32f4xx_it.xcl
@@ -42,12 +48,13 @@ build stm32f4xx_hal_rcc.pbi : index stm32f4xx_hal_rcc.xcl
 build stm32f4xx_hal_rcc_ex.pbi : index stm32f4xx_hal_rcc_ex.xcl
 build stm32f4xx_hal_tim.pbi : index stm32f4xx_hal_tim.xcl
 build stm32f4xx_hal_tim_ex.pbi : index stm32f4xx_hal_tim_ex.xcl
-build STM_CAN_part0.pbi : link main.pbi stm32f4xx_hal_msp.pbi stm32f4xx_it.pbi system_stm32f4xx.pbi stm32f4xx_hal.pbi
-build STM_CAN_part1.pbi : link stm32f4xx_hal_adc.pbi stm32f4xx_hal_adc_ex.pbi stm32f4xx_hal_can.pbi stm32f4xx_hal_cortex.pbi stm32f4xx_hal_dma.pbi
-build STM_CAN_part2.pbi : link stm32f4xx_hal_dma_ex.pbi stm32f4xx_hal_exti.pbi stm32f4xx_hal_flash.pbi stm32f4xx_hal_flash_ex.pbi stm32f4xx_hal_flash_ramfunc.pbi
-build STM_CAN_part3.pbi : link stm32f4xx_hal_gpio.pbi stm32f4xx_hal_pwr.pbi stm32f4xx_hal_pwr_ex.pbi stm32f4xx_hal_rcc.pbi stm32f4xx_hal_rcc_ex.pbi
-build STM_CAN_part4.pbi : link stm32f4xx_hal_tim.pbi stm32f4xx_hal_tim_ex.pbi
-build STM_CAN.pbd : link STM_CAN_part0.pbi STM_CAN_part1.pbi STM_CAN_part2.pbi STM_CAN_part3.pbi STM_CAN_part4.pbi
+build STM_CAN_part0.pbi : link CAN_HLC.pbi CAN_NMT.pbi CANOpen.pbi CANOpen_batch.pbi CANOpen_hw_appl.pbi
+build STM_CAN_part1.pbi : link CANOpen_var.pbi main.pbi stm32f4xx_hal_msp.pbi stm32f4xx_it.pbi system_stm32f4xx.pbi
+build STM_CAN_part2.pbi : link stm32f4xx_hal.pbi stm32f4xx_hal_adc.pbi stm32f4xx_hal_adc_ex.pbi stm32f4xx_hal_can.pbi stm32f4xx_hal_cortex.pbi
+build STM_CAN_part3.pbi : link stm32f4xx_hal_dma.pbi stm32f4xx_hal_dma_ex.pbi stm32f4xx_hal_exti.pbi stm32f4xx_hal_flash.pbi stm32f4xx_hal_flash_ex.pbi
+build STM_CAN_part4.pbi : link stm32f4xx_hal_flash_ramfunc.pbi stm32f4xx_hal_gpio.pbi stm32f4xx_hal_pwr.pbi stm32f4xx_hal_pwr_ex.pbi stm32f4xx_hal_rcc.pbi
+build STM_CAN_part5.pbi : link stm32f4xx_hal_rcc_ex.pbi stm32f4xx_hal_tim.pbi stm32f4xx_hal_tim_ex.pbi
+build STM_CAN.pbd : link STM_CAN_part0.pbi STM_CAN_part1.pbi STM_CAN_part2.pbi STM_CAN_part3.pbi STM_CAN_part4.pbi STM_CAN_part5.pbi
 build STM_CAN.pbw : browsedata STM_CAN.pbd
 
 

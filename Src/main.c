@@ -23,7 +23,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "CANOPEN_var.h"
+#include "CANOpen.h"
+#include "math.h"
+#include "CANOpen_batch.h"
+#include "CAN_HLC.h"
+#include "CAN_NMT.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,11 +67,82 @@ static void MX_CAN1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+CO_PDOStruct tpdo2;
+CO_PDOStruct rpdo3;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interrupt
+{
+    if (hcan->Instance == CAN1)
+  {
+    HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
+    CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    if (RxHeader.StdId == 0x281) // Current Position & velocity from motor driver.
+    {
+      Pos[0] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
+      Load_pos[0] = Load[0];
+    }
+    else if (RxHeader.StdId == 0x283)
+    {
+      Pos[1] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
+      Load_pos[1] = Load[1];
+    }
+
+    else if (RxHeader.StdId == 0x285)
+    {
+      Pos[2] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
+      Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
+    }
+  }
+}
+
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+   if (htim == &htim1)
+  {
+    if (RealTime)
+    {
+      Timer_Flag = 1;
+    }
+  }
+  else if(htim == &htim2)
+  {
+    CANOpen_timerLoop();
+  }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_13) // Blue switch
+  {
+    Input = Button1;
+  }
+
+  else if (GPIO_Pin == GPIO_PIN_15) // Lower switch (Far from STM)
+  {
+    Input = Button2;
+    RealTime = 0; // Stop the RT control mode.
+  }
+
+  else if (GPIO_Pin == GPIO_PIN_12) // Upper switch (close to STM)
+  {
+    Input = Button3;
+    RealTime = 0; // Stop the RT control mode.
+  }
+}
+
+void myDMACompleteCallback(struct __DMA_HandleTypeDef *hdma)
+{
+    if (hdma == &hdma_adc1)
+  {
+      Load[0] = adcValue[0];
+      Load[1] = adcValue[1];
+      Load[2] = adcValue[2];
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -105,7 +181,39 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adcValue, 3);
+  hadc1.DMA_Handle->XferCpltCallback = &myDMACompleteCallback;
 
+  // Timer interrupt starts
+  HAL_TIM_Base_Start_IT(&htim1);
+  
+  CAN_Filter_Init();
+  HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+  if (HAL_CAN_Start(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  uint16_t controlword = 0x06;
+  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  controlword = 0x07;
+  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  controlword = 0x0F;
+  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  
+  uint16_t mode = 0x01;
+  CANOpen_writeOD_int8(0x01, 0x6060, 0x00, mode, 1000);
+  
+  // Pdo setting
+  CANOpen_mappingPDO_init(&tpdo2);
+  CANOpen_mappingPDO_int32(&tpdo2, &position);
+  CANOpen_mappingPDO_int32(&tpdo2, &velocity);
+  
+  CANOpen_mappingPDO_init(&rpdo3);
+  CANOpen_mappingPDO_int32(&rpdo3, &target_velocity);
+  // HAL_ADC starts
+  HAL_ADC_Start(&hadc1);
+    
   /* USER CODE END 2 */
  
  
@@ -115,7 +223,32 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+  if (!RealTime)
+    {
+      switch(Input){
+      case Init:
+        Init_CAN(); 
+        Input = Init_state; break;
+      case Button1:
+        Enter_RT_CAN(Ctrl_Mode);
+        Input = Init_state; break;
+      case Button2:
+        Zero_Pos(10);
+        Input = Init_state; break;
+      case Button3:
+        Reset_MotorDriver();
+        Input = Init_state; break;
+     }
+    }
+  else
+  {
+    if(Timer_Flag)
+    {
+      /*Put a function for RT_control.*/
+      
+      /*Put a function for RT_control.*/
+    }
+  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -141,7 +274,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 180;
+  RCC_OscInitStruct.PLL.PLLN = 360;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
@@ -429,7 +562,25 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+extern void CAN_Filter_Init(void)
+{
+  CAN_FilterTypeDef sFilterConfig;
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_16BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
 
+  if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
 /* USER CODE END 4 */
 
 /**
