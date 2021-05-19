@@ -7,7 +7,61 @@
 
 #define NumOfNode 3
 
-typedef enum _Input_Status{
+typedef enum SDO_OP{
+  Set_OP_mode,
+  Device_Control,
+}SDO_OP;
+
+typedef enum Control_Mode
+{
+  error,
+  Profile_pos,
+  Profile_vel,
+  Cyclic_sync_pos,
+  Cyclic_sync_vel,
+  voltage,
+} Control_Mode;
+
+typedef enum StateMachine
+{
+  SM_Ready_to_switch_on,
+  SM_Switched_on,
+  SM_Operation_enabled,
+  SM_Quick_Stop,
+  SM_Halt,
+  SM_Unknown,
+}StateMachine;
+
+typedef enum Control_word
+{
+  Shut_down,
+  Switch_on,
+  Disable_voltage,
+  Quick_stop,
+  Disable_operation,
+  Enable_operation,
+  Fault_reset,
+} Control_word;
+
+typedef enum NMT_OP{
+  Start_Remote_node,
+  Enter_Pre_operation,
+  Stop_Remote_node,
+  Reset_node,
+  Reset_Communication,
+  Ask_NMT,
+}NMT_OP;
+
+typedef enum NMT_Status
+{
+  Operation_not_worked,
+  Initialization,
+  Pre_operation,
+  Stopped,
+  Operational,
+} NMT_Status;
+
+typedef enum Input_Status{
   Init,
   Button1,
   Button2,
@@ -15,12 +69,12 @@ typedef enum _Input_Status{
   Init_state,
 }Input_Status;
 
-extern uint8_t Ctrl_Mode;
+extern Control_Mode Ctrl_Mode;
 // Related to the CAN communication in low level
 extern CAN_HandleTypeDef CanHandle;
 extern CAN_RxHeaderTypeDef RxHeader;
 extern uint8_t RxData[8];
-
+extern uint16_t data;
 extern uint8_t RealTime;
 extern uint8_t Timer_Flag;
 extern uint16_t Load_bf[3];
@@ -31,15 +85,8 @@ extern int16_t torque;
 extern int32_t position;
 extern int32_t velocity;
 extern int32_t target_velocity;
-
-extern CO_PDOStruct tpdo2;
-extern CO_PDOStruct rpdo3;
-
+extern uint8_t len;
 extern uint16_t Load_pos[3];
-
-//extern uint8_t Button1;
-//extern uint8_t Button2;
-//extern uint8_t Button3;
 
 extern uint16_t adcValue[3];
 extern int32_t Pos[3];

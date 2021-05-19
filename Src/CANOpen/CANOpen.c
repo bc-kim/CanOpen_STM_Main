@@ -73,7 +73,7 @@ CO_Status CANOpen_writeOD(uint8_t nodeId,
 CO_Status CANOpen_readOD(uint8_t nodeId,
                      uint16_t Index,
                      uint8_t subIndex,
-                     uint8_t* data,
+                     uint16_t* data,
                      uint8_t* len,
                      uint16_t timeout)
 {

@@ -98,7 +98,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
   }
 }
 
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
    if (htim == &htim1)
@@ -194,15 +193,15 @@ int main(void)
     Error_Handler();
   }
 
-  uint16_t controlword = 0x06;
-  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
-  controlword = 0x07;
-  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
-  controlword = 0x0F;
-  CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  //uint16_t controlword = 0x06;
+  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  //controlword = 0x07;
+  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
+  //controlword = 0x0F;
+  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
   
-  uint16_t mode = 0x01;
-  CANOpen_writeOD_int8(0x01, 0x6060, 0x00, mode, 1000);
+  //uint16_t mode = 0x01;
+  //CANOpen_writeOD_int8(0x01, 0x6060, 0x00, mode, 1000);
   
   // Pdo setting
   CANOpen_mappingPDO_init(&tpdo2);
@@ -213,7 +212,7 @@ int main(void)
   CANOpen_mappingPDO_int32(&rpdo3, &target_velocity);
   // HAL_ADC starts
   HAL_ADC_Start(&hadc1);
-    
+  Ctrl_Mode = Profile_pos;
   /* USER CODE END 2 */
  
  

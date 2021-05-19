@@ -4,12 +4,16 @@
 #include "CANOpen.h"
 #include <CANOpen_var.h>
 
-void Init_CAN();
-void Enter_RT_CAN(uint8_t Ctrl_Mode);
+extern CO_Status Init_CAN();
+extern void Enter_RT_CAN(Control_Mode Ctrl_Mode);
 void Zero_Pos(uint8_t time_out);
 void Reset_MotorDriver();
-uint8_t CAN_BC_Enable_CTR(uint8_t mode, uint8_t Node);
-
+extern void CAN_Device_Control(Control_word controlword, uint8_t Node);
+extern enum NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay);
+extern enum Control_Mode CAN_Check_ControlMode(uint8_t Node);
+extern enum StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay);
+extern void CAN_Set_ControlMode(Control_Mode controlmode, uint8_t Node);
+// uint8_t CAN_NMT_CTR();
 // 0x22 PDO Objects
 extern CO_PDOStruct readPDO_0x22;
 extern CO_PDOStruct sendPDO_0x22;
