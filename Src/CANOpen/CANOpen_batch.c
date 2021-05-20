@@ -67,8 +67,8 @@ void Enter_RT_CAN(Control_Mode Ctrl_Mode)
     // Shut down ->  Switch Down -> Enable Operation*/
     if (i < NumOfNode)
     {
-      CAN_Set_ControlMode(Profile_vel, Node[i]);
-      if (CAN_Check_ControlMode(Node[i]) == Profile_vel)
+      CAN_Set_ControlMode(Ctrl_Mode, Node[i]);
+      if (CAN_Check_ControlMode(Node[i]) == Ctrl_Mode)
       {
         Status[i] = 1;
       }
@@ -89,11 +89,56 @@ void Enter_RT_CAN(Control_Mode Ctrl_Mode)
 }
 
 void Zero_Pos(uint8_t time_out){
-
+  uint8_t Status[8] = {
+      0,
+  };
+  uint8_t sum = 0;
+  // Change to the position mode.
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    if (i < NumOfNode)
+    {
+      CAN_Set_ControlMode(Cyclic_sync_pos, Node[i]);
+      if (CAN_Check_ControlMode(Node[i]) == Cyclic_sync_pos)
+      {
+        Status[i] = 1;
+      }
+    }
+    else
+    {
+      Status[i] = 1;
+    }
+    sum = sum + Status[i];
+  }
+  if (sum == 8) // If all the nodes initialization is done well, the 'sum' value would be 8.
+  {
+    for (uint8_t i = 0; i < 8; i++) // Go to zero position
+    {
+      if (i < NumOfNode)
+      {
+        CAN_Set_TargetValue(Cyclic_sync_pos,0x00000000,Node[i]);
+      }
+    }
+  }
 }
 
 void Reset_MotorDriver(){
-
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    if (i < NumOfNode)
+    {
+      CAN_Device_Control(Shut_down,Node[i]);
+    }
+  }
+  // Reset the node
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    if (i < NumOfNode)
+    {
+      CAN_NMT(Reset_node,Node[i],10);
+    }
+  }
+  CANOpen_sendSync();
 }
 
 Control_Mode CAN_Check_ControlMode(uint8_t Node){
@@ -101,27 +146,33 @@ Control_Mode CAN_Check_ControlMode(uint8_t Node){
   {
     if (SM_Operation_enabled==CAN_Device_Status(Node, 10))
     {
-      CANOpen_writeOD_int8(Node, 0x6061, 0x00, 0x00, 1000);
-      HAL_Delay(10);
-      if (RxData[4] == 0x01)
+      uint16_t check_data;
+      uint8_t check_data_h;
+      uint8_t check_data_l;
+      CANOpen_readOD(Node, 0x6061, 0x00, &check_data, &len, 1000);
+      check_data_l = (uint8_t)check_data;
+      check_data_h = (check_data - check_data_l) << 8;
+      data = (uint16_t)check_data_l;
+      switch (data)
       {
+      case 0x01:
         return Profile_pos;
-      }
-      else if (RxData[4] == 0x03)
-      {
+        break;
+      case 0x03:
         return Profile_vel;
-      }
-      else if (RxData[4] == 0x08)
-      {
+        break;
+      case 0x08:
         return Cyclic_sync_pos;
-      }
-      else if (RxData[4] == 0x09)
-      {
+        break;
+      case 0x09:
         return Cyclic_sync_vel;
-      }
-      else if (RxData[4] == 0xF7)
-      {
+        break;
+      case 0xF7:
         return voltage;
+        break;
+      default:
+        return error;
+        break;
       }
     }
     else{
@@ -139,28 +190,19 @@ void CAN_Set_ControlMode(Control_Mode controlmode, uint8_t Node)
   switch (controlmode)
   {
   case Profile_pos:
-    mode = 0x01;
-    CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
-    break;
+    mode = 0x01;    break;
   case Profile_vel:
-    mode = 0x03;
-    CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
-    break;
+    mode = 0x03;    break;
   case Cyclic_sync_pos:
-    mode = 0x08;
-    CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
-    break;
+    mode = 0x08;    break;
   case Cyclic_sync_vel:
-    mode = 0x09;
-    CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
-    break;
+    mode = 0x09;    break;
   case voltage:
-    mode = 0xF7;
-    CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
-    break;
+    mode = 0xF7;    break;
   default:
     break;
   }
+  CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
 }
 
 void CAN_Device_Control(Control_word controlword, uint8_t Node)
@@ -169,20 +211,27 @@ void CAN_Device_Control(Control_word controlword, uint8_t Node)
   switch (controlword)
   {
   case Shut_down:
-    control_word = 0x06;
-    CANOpen_writeOD_uint16(Node, 0x6040, 0x00, control_word, 1000);
-    break;
+   control_word = 0x06; break;
   case Switch_on:
-    control_word = 0x07;
-    CANOpen_writeOD_uint16(Node, 0x6040, 0x00, control_word, 1000);
-    break;
+   control_word = 0x07; break;
   case Enable_operation:
-    control_word = 0x0F;
-    CANOpen_writeOD_uint16(Node, 0x6040, 0x00, control_word, 1000);
-    break;
+   control_word = 0x0F; break;
   case Fault_reset:
-    control_word = 0x08;
-    CANOpen_writeOD_uint16(Node, 0x6040, 0x00, control_word, 1000);
+   control_word = 0x08; break;
+  default: break;
+  }
+  CANOpen_writeOD_uint16(Node, 0x6040, 0x00, control_word, 1000);
+}
+
+void CAN_Set_TargetValue(Control_Mode controlmode, uint32_t data, uint8_t Node)
+{
+  switch (controlmode)
+  {
+  case Cyclic_sync_pos:
+    CANOpen_writeOD_uint32(Node, 0x607A, 0x00, data, 1000);
+    break;
+  case Cyclic_sync_vel:
+    CANOpen_writeOD_uint32(Node, 0x60FF, 0x00, data, 1000);
     break;
   default:
     break;
@@ -191,7 +240,7 @@ void CAN_Device_Control(Control_word controlword, uint8_t Node)
 
 StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay)
 {
-  uint16_t check_data = 0x00;
+  uint16_t check_data = 0x0000;
   uint8_t check_data_h = 0x00;
   uint8_t check_data_l = 0x00;
   CANOpen_readOD(Node, 0x6041, 0x00, &check_data, &len, 1000);

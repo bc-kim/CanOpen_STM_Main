@@ -5,7 +5,7 @@
 #include "stm32f4xx_hal.h"
 // Constant values
 
-#define NumOfNode 3
+#define NumOfNode 1
 
 typedef enum SDO_OP{
   Set_OP_mode,

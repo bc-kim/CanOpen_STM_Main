@@ -193,16 +193,6 @@ int main(void)
     Error_Handler();
   }
 
-  //uint16_t controlword = 0x06;
-  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
-  //controlword = 0x07;
-  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
-  //controlword = 0x0F;
-  //CANOpen_writeOD_uint16(0x01, 0x6040, 0x00, controlword, 1000);
-  
-  //uint16_t mode = 0x01;
-  //CANOpen_writeOD_int8(0x01, 0x6060, 0x00, mode, 1000);
-  
   // Pdo setting
   CANOpen_mappingPDO_init(&tpdo2);
   CANOpen_mappingPDO_int32(&tpdo2, &position);
@@ -210,9 +200,10 @@ int main(void)
   
   CANOpen_mappingPDO_init(&rpdo3);
   CANOpen_mappingPDO_int32(&rpdo3, &target_velocity);
+  
   // HAL_ADC starts
   HAL_ADC_Start(&hadc1);
-  Ctrl_Mode = Profile_pos;
+  Ctrl_Mode = Profile_vel;
   /* USER CODE END 2 */
  
  
@@ -221,20 +212,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-  if (!RealTime)
+    if (!RealTime)
     {
       switch(Input){
       case Init:
         Init_CAN(); 
         Input = Init_state; break;
-      case Button1:
-        Enter_RT_CAN(Ctrl_Mode);
+      case Button1: // Blue switch
+        Enter_RT_CAN(Profile_vel);
         Input = Init_state; break;
-      case Button2:
+      case Button2: // Lower switch (close to STM)
         Zero_Pos(10);
         Input = Init_state; break;
-      case Button3:
+      case Button3: // Upper switch (Far from STM)
         Reset_MotorDriver();
         Input = Init_state; break;
      }
@@ -248,7 +238,10 @@ int main(void)
       /*Put a function for RT_control.*/
     }
   }
+    /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
+      
   }
   /* USER CODE END 3 */
 }
@@ -534,13 +527,13 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB12 PB15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -557,6 +550,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 

@@ -13,6 +13,8 @@ extern enum NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay);
 extern enum Control_Mode CAN_Check_ControlMode(uint8_t Node);
 extern enum StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay);
 extern void CAN_Set_ControlMode(Control_Mode controlmode, uint8_t Node);
+extern void CAN_Set_TargetValue(Control_Mode controlmode, uint32_t data, uint8_t Node);
+
 // uint8_t CAN_NMT_CTR();
 // 0x22 PDO Objects
 extern CO_PDOStruct readPDO_0x22;
