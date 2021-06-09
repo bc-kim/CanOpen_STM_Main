@@ -6,7 +6,8 @@
 	],
 	"settings": {
 		"files.associations": {
-			"canopen_hw_appl.h": "c"
+			"canopen_hw_appl.h": "c",
+			"canopen_var.h": "c"
 		}
 	}
 }

@@ -74,7 +74,7 @@ extern Control_Mode Ctrl_Mode;
 extern CAN_HandleTypeDef CanHandle;
 extern CAN_RxHeaderTypeDef RxHeader;
 extern uint8_t RxData[8];
-extern uint16_t data;
+extern uint8_t data;
 extern uint8_t RealTime;
 extern uint8_t Timer_Flag;
 extern uint16_t Load_bf[3];
@@ -90,8 +90,28 @@ extern uint16_t Load_pos[3];
 
 extern uint16_t adcValue[3];
 extern int32_t Pos[3];
+extern int32_t Torque[3];
+
+extern float A_Flexor;
+extern float A_Extensor;
+extern float B_Flexor;
+extern float B_Extensor;
+
+extern float Target_T[2];
+extern float Tension_error[2];
+extern float Tension_error_before[2];
+extern int32_t Target_Vel[2];
+extern float kp[2];
+extern float kd[2];
+
+extern int32_t Pos_ubound[2];
+extern float T_ubound[2];
+extern int32_t Pos_lbound[2];
+extern uint16_t Exp_Result;
+extern uint8_t Exp_finished;
+
 #ifdef __cplusplus
 #endif
 #endif /* __CANOPEN_VAR_H__ */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+    /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

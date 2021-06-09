@@ -146,13 +146,9 @@ Control_Mode CAN_Check_ControlMode(uint8_t Node){
   {
     if (SM_Operation_enabled==CAN_Device_Status(Node, 10))
     {
-      uint16_t check_data;
-      uint8_t check_data_h;
-      uint8_t check_data_l;
-      CANOpen_readOD(Node, 0x6061, 0x00, &check_data, &len, 1000);
-      check_data_l = (uint8_t)check_data;
-      check_data_h = (check_data - check_data_l) << 8;
-      data = (uint16_t)check_data_l;
+      uint8_t check_data[4];
+      CANOpen_readOD(Node, 0x6061, 0x00, check_data, &len, 1000);
+      memcpy(&data,check_data,len);
       switch (data)
       {
       case 0x01:
@@ -240,13 +236,12 @@ void CAN_Set_TargetValue(Control_Mode controlmode, uint32_t data, uint8_t Node)
 
 StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay)
 {
-  uint16_t check_data = 0x0000;
-  uint8_t check_data_h = 0x00;
-  uint8_t check_data_l = 0x00;
-  CANOpen_readOD(Node, 0x6041, 0x00, &check_data, &len, 1000);
-  check_data_l = (uint8_t) check_data;
-  check_data_h = (check_data-check_data_l)<<8;
-  data = (uint16_t) check_data_l;
+  uint8_t check_data[4];
+  CANOpen_readOD(Node, 0x6041, 0x00, check_data, &len, 1000);
+  //check_data_l = (uint8_t) check_data;
+  //check_data_h = (check_data-check_data_l)<<8;
+  //data = (uint16_t) check_data_l;
+  memcpy(&data,check_data,len);
   if (data == 0x21 || data == 0x31 || data == 0xa1 || data == 0xb1) //Ready to switch on
   {
     return SM_Ready_to_switch_on;

@@ -29,6 +29,8 @@
 #include "CANOpen_batch.h"
 #include "CAN_HLC.h"
 #include "CAN_NMT.h"
+#include <stdint.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,7 +70,8 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 CO_PDOStruct tpdo2;
-CO_PDOStruct rpdo3;
+CO_PDOStruct rpdo1_3;
+CO_PDOStruct rpdo2_3;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -79,32 +82,76 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
   {
     HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
     CANOpen_addRxBuffer(RxHeader.StdId, RxData);
-    if (RxHeader.StdId == 0x281) // Current Position & velocity from motor driver.
+    if (RxHeader.StdId == 0x281) // Flexor.
     {
-      Pos[0] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
+      memcpy(&Pos[0],&RxData[0],4);
+      memcpy(&Torque[0], &RxData[4],4);
       Load_pos[0] = Load[0];
     }
-    else if (RxHeader.StdId == 0x283)
+    else if (RxHeader.StdId == 0x283) // Extensor
     {
-      Pos[1] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
-      Load_pos[1] = Load[1];
+      memcpy(&Pos[1],&RxData[0],4);
+      memcpy(&Torque[1], &RxData[4], 4);
+      //Load_pos[1] = Load[1]; // In EG2, the loadcell is not used for the extensor.
+      Load_pos[1] = (Torque[0]*Torque[1])/Load_pos[0]; 
     }
 
     else if (RxHeader.StdId == 0x285)
     {
-      Pos[2] = RxData[0] + 256 * RxData[1] + 256 * 256 * (RxData[2] + 256 * RxData[3]);
+      memcpy(&Pos[2],&RxData[0],4);
+      memcpy(&Torque[2], &RxData[4], 4);
       Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
+    }
+
+    else if (RxHeader.StdId == 0x55)
+    {
+      memcpy(&A_Extensor, &RxData[0], 4);
+      memcpy(&B_Extensor, &RxData[4], 4);
+    }
+
+    else if (RxHeader.StdId == 0x56)
+    {
+      memcpy(&A_Flexor, &RxData[0], 4);
+      memcpy(&B_Flexor, &RxData[4], 4);
     }
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-   if (htim == &htim1)
+
+  if (htim == &htim1)
   {
     if (RealTime)
     {
       Timer_Flag = 1;
+      
+      if(Pos[0]<Pos_ubound[0] && Pos[0]>Pos_lbound[0]){
+        Target_T[0] = MAX(A_Extensor * Pos[0] + B_Extensor, T_ubound[0]); // Float 4byte
+        memcpy(&Tension_error_before[0], &Tension_error[0], 4);
+        Tension_error[0] = Target_T[0] - Load_pos[0];
+        Target_Vel[0] = (int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0]));
+      }
+      else{
+        Target_Vel[0] = 0;
+      }
+      CANOpen_sendPDO(1, 1, &rpdo1_3);
+      
+      if (Pos[1] < Pos_ubound[1] && Pos[1] > Pos_lbound[1])
+      {
+        Target_T[1] = MAX(A_Flexor * Pos[1] + B_Flexor, T_ubound[1]);
+        memcpy(&Tension_error_before[1], &Tension_error[1], 4);
+        Tension_error[1] = Target_T[1] - Load_pos[1];
+        Target_Vel[1] = (int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1]));
+      }
+      else
+      {
+        Target_Vel[1] = 0;
+      }
+      CANOpen_sendPDO(2, 1, &rpdo2_3);
+
+      Exp_Result = MIN(Exp_Result,Load[2]);
+      CANOpen_sendSync();
     }
   }
   else if(htim == &htim2)
@@ -198,8 +245,11 @@ int main(void)
   CANOpen_mappingPDO_int32(&tpdo2, &position);
   CANOpen_mappingPDO_int32(&tpdo2, &velocity);
   
-  CANOpen_mappingPDO_init(&rpdo3);
-  CANOpen_mappingPDO_int32(&rpdo3, &target_velocity);
+  CANOpen_mappingPDO_init(&rpdo1_3);
+  CANOpen_mappingPDO_int32(&rpdo1_3, &Target_Vel[0]);
+  
+  CANOpen_mappingPDO_init(&rpdo2_3);
+  CANOpen_mappingPDO_int32(&rpdo2_3, &Target_Vel[1]);
   
   // HAL_ADC starts
   HAL_ADC_Start(&hadc1);
@@ -234,7 +284,11 @@ int main(void)
     if(Timer_Flag)
     {
       /*Put a function for RT_control.*/
-      
+      if(Exp_finished){
+        //uint8_t TxData_exp_result[8];
+        //TxData_exp_result[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+        //CANOpen_sendFrame(0x51, TxData_exp_result, 0);
+      }
       /*Put a function for RT_control.*/
     }
   }

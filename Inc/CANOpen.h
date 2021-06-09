@@ -12,6 +12,8 @@ typedef enum CO_Status{
 }CO_Status;
 
 #define CO_PDOSTR_LEN        10
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 typedef struct CO_PDOStruct{
   void* data[CO_PDOSTR_LEN];
   uint8_t bitlen[CO_PDOSTR_LEN];
@@ -31,7 +33,7 @@ extern CO_Status CANOpen_writeOD_int16(uint8_t nodeId, uint16_t Index, uint8_t s
 extern CO_Status CANOpen_writeOD_uint8(uint8_t nodeId, uint16_t Index, uint8_t subIndex, uint8_t data, uint16_t timeout);
 extern CO_Status CANOpen_writeOD_int8(uint8_t nodeId, uint16_t Index, uint8_t subIndex, int8_t data, uint16_t timeout);
 
-extern CO_Status CANOpen_readOD(uint8_t nodeId, uint16_t Index, uint8_t subIndex, uint16_t* data, uint8_t* len, uint16_t timeout);
+extern CO_Status CANOpen_readOD(uint8_t nodeId, uint16_t Index, uint8_t subIndex, uint8_t data[4], uint8_t* len, uint16_t timeout);
 
 extern void CANOpen_mappingPDO_init(CO_PDOStruct* pdo_struct);
 extern void CANOpen_mappingPDO_float(CO_PDOStruct* pdo_struct, float* data);
