@@ -23,8 +23,8 @@ extern uint16_t Load_pos[3] = {0x00,0x00,0x00};
 extern uint8_t data = 0;
 extern uint8_t len = 0;
 
-extern float A_Flexor = 1.0;
-extern float A_Extensor = 1.0;
+extern float A_Flexor = 0.5;
+extern float A_Extensor = 100.0;
 extern float B_Flexor = 1.0;
 extern float B_Extensor = 1.0;
 
@@ -35,9 +35,11 @@ extern int32_t Target_Vel[2] = {1.0, 1.0};
 extern float kp[2] = {1.0, 1.0};
 extern float kd[2] = {1.0, 1.0};
 
-extern int32_t Pos_ubound[2] = {1, 2};
-extern float T_ubound[2] = {1.0, 2.0};
-extern int32_t Pos_lbound[2] = {1, 2};
+extern int32_t Pos_ubound[2] = {22000, 22000};
+extern int32_t Vel_ubound[2] = {1000,400};
+extern float T_ubound[2] = {1000.0, 2000.0};
+extern float T_lbound[2] = {50.0, 10.0};
+extern int32_t Pos_lbound[2] = {-500, -500};
 
 extern uint16_t Exp_Result = 500;
 extern uint8_t Exp_finished = 1;

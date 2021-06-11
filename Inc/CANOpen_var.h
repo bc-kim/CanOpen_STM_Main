@@ -101,11 +101,13 @@ extern float Target_T[2];
 extern float Tension_error[2];
 extern float Tension_error_before[2];
 extern int32_t Target_Vel[2];
+extern int32_t Vel_ubound[2];
 extern float kp[2];
 extern float kd[2];
 
 extern int32_t Pos_ubound[2];
 extern float T_ubound[2];
+extern float T_lbound[2];
 extern int32_t Pos_lbound[2];
 extern uint16_t Exp_Result;
 extern uint8_t Exp_finished;

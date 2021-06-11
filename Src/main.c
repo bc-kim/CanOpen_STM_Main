@@ -49,7 +49,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
+ADC_HandleTypeDef hadc2;
+ADC_HandleTypeDef hadc3;
 
 CAN_HandleTypeDef hcan1;
 
@@ -63,11 +64,12 @@ TIM_HandleTypeDef htim2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_ADC2_Init(void);
+static void MX_ADC3_Init(void);
 /* USER CODE BEGIN PFP */
 CO_PDOStruct tpdo2;
 CO_PDOStruct rpdo1_3;
@@ -81,26 +83,25 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
     if (hcan->Instance == CAN1)
   {
     HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
-    CANOpen_addRxBuffer(RxHeader.StdId, RxData);
     if (RxHeader.StdId == 0x281) // Flexor.
     {
       memcpy(&Pos[0],&RxData[0],4);
       memcpy(&Torque[0], &RxData[4],4);
-      Load_pos[0] = Load[0];
+      // Load_pos[0] = Load[0];
     }
     else if (RxHeader.StdId == 0x283) // Extensor
     {
       memcpy(&Pos[1],&RxData[0],4);
       memcpy(&Torque[1], &RxData[4], 4);
       //Load_pos[1] = Load[1]; // In EG2, the loadcell is not used for the extensor.
-      Load_pos[1] = (Torque[0]*Torque[1])/Load_pos[0]; 
+      // Load_pos[1] = (Torque[0]*Torque[1])/Load_pos[0]; 
     }
 
     else if (RxHeader.StdId == 0x285)
     {
       memcpy(&Pos[2],&RxData[0],4);
       memcpy(&Torque[2], &RxData[4], 4);
-      Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
+      // Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
     }
 
     else if (RxHeader.StdId == 0x55)
@@ -114,47 +115,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
       memcpy(&A_Flexor, &RxData[0], 4);
       memcpy(&B_Flexor, &RxData[4], 4);
     }
+    
+    else{
+        CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    }
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-
-  if (htim == &htim1)
-  {
-    if (RealTime)
-    {
-      Timer_Flag = 1;
-      
-      if(Pos[0]<Pos_ubound[0] && Pos[0]>Pos_lbound[0]){
-        Target_T[0] = MAX(A_Extensor * Pos[0] + B_Extensor, T_ubound[0]); // Float 4byte
-        memcpy(&Tension_error_before[0], &Tension_error[0], 4);
-        Tension_error[0] = Target_T[0] - Load_pos[0];
-        Target_Vel[0] = (int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0]));
-      }
-      else{
-        Target_Vel[0] = 0;
-      }
-      CANOpen_sendPDO(1, 1, &rpdo1_3);
-      
-      if (Pos[1] < Pos_ubound[1] && Pos[1] > Pos_lbound[1])
-      {
-        Target_T[1] = MAX(A_Flexor * Pos[1] + B_Flexor, T_ubound[1]);
-        memcpy(&Tension_error_before[1], &Tension_error[1], 4);
-        Tension_error[1] = Target_T[1] - Load_pos[1];
-        Target_Vel[1] = (int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1]));
-      }
-      else
-      {
-        Target_Vel[1] = 0;
-      }
-      CANOpen_sendPDO(2, 1, &rpdo2_3);
-
-      Exp_Result = MIN(Exp_Result,Load[2]);
-      CANOpen_sendSync();
-    }
-  }
-  else if(htim == &htim2)
+  if(htim == &htim2)
   {
     CANOpen_timerLoop();
   }
@@ -180,13 +150,52 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
-void myDMACompleteCallback(struct __DMA_HandleTypeDef *hdma)
+
+void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    if (hdma == &hdma_adc1)
-  {
-      Load[0] = adcValue[0];
-      Load[1] = adcValue[1];
-      Load[2] = adcValue[2];
+  if(hadc ==&hadc1){
+    adcValue[0] = 4096 - ADC1->JDR1;
+    adcValue[1] = ADC2->JDR1;
+    adcValue[2] = ADC3->JDR1;
+    
+    if (RealTime)
+    {
+    
+      // Motor 1 (Flexor)
+      Target_T[0] = MIN(A_Extensor * Pos[0] + B_Extensor, T_ubound[0]); // Float 4byte
+      Target_T[0] = MAX(Target_T[0],T_lbound[0]);
+      memcpy(&Tension_error_before[0], &Tension_error[0], 4);
+      Tension_error[0] = Target_T[0] - adcValue[0];
+      Target_Vel[0] = MIN((int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0])),Vel_ubound[0]);
+      
+      if(Pos[0] > Pos_ubound[0] && Target_Vel[0] >0)
+      {
+        Target_Vel[0] = 0;
+      }
+      else if(Pos[0] < Pos_lbound[0] && Target_Vel[0] <0)
+      {
+        Target_Vel[0] = 0;
+      }
+      CANOpen_sendPDO(0x01, 3, &rpdo1_3);
+
+    // Motor 2 (Extensor)
+      // if (Pos[1] < Pos_ubound[1] && Pos[1] > Pos_lbound[1])
+      // {
+      //   Target_T[1] = MAX(A_Flexor * Pos[1] + B_Flexor, T_ubound[1]);
+      //   memcpy(&Tension_error_before[1], &Tension_error[1], 4);
+      //   Tension_error[1] = Target_T[1] - Load_pos[1];
+      //   Target_Vel[1] = (int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1]));
+      // }
+      // else
+      // {
+      //   Target_Vel[1] = 0;
+      // }
+//      CANOpen_sendPDO(0x03, 1, &rpdo2_3);
+
+      // Motor 3 (Experiment)
+      Exp_Result = MIN(Exp_Result, Load[2]);
+      CANOpen_sendSync();
+    }
   }
 }
 
@@ -221,18 +230,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_ADC1_Init();
   MX_CAN1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_ADC2_Init();
+  MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adcValue, 3);
-  hadc1.DMA_Handle->XferCpltCallback = &myDMACompleteCallback;
 
   // Timer interrupt starts
   HAL_TIM_Base_Start_IT(&htim1);
-  
+  HAL_ADCEx_InjectedStart_IT(&hadc1);
+  HAL_ADCEx_InjectedStart(&hadc2);
+  HAL_ADCEx_InjectedStart(&hadc3);
+
   CAN_Filter_Init();
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
   if (HAL_CAN_Start(&hcan1) != HAL_OK)
@@ -251,8 +262,6 @@ int main(void)
   CANOpen_mappingPDO_init(&rpdo2_3);
   CANOpen_mappingPDO_int32(&rpdo2_3, &Target_Vel[1]);
   
-  // HAL_ADC starts
-  HAL_ADC_Start(&hadc1);
   Ctrl_Mode = Profile_vel;
   /* USER CODE END 2 */
  
@@ -283,13 +292,13 @@ int main(void)
   {
     if(Timer_Flag)
     {
-      /*Put a function for RT_control.*/
-      if(Exp_finished){
+      /*Put extra functions for RT_control.*/
+      if(Exp_finished){ // when the experiment is finished, the loadcell data will be transferred.
         //uint8_t TxData_exp_result[8];
         //TxData_exp_result[8] = {1, 1, 1, 1, 1, 1, 1, 1};
         //CANOpen_sendFrame(0x51, TxData_exp_result, 0);
       }
-      /*Put a function for RT_control.*/
+      /*Put extra functions for RT_control.*/
     }
   }
     /* USER CODE END WHILE */
@@ -362,6 +371,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 0 */
 
   ADC_ChannelConfTypeDef sConfig = {0};
+  ADC_InjectionConfTypeDef sConfigInjected = {0};
 
   /* USER CODE BEGIN ADC1_Init 1 */
 
@@ -371,13 +381,13 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = ENABLE;
+  hadc1.Init.ScanConvMode = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -386,31 +396,163 @@ static void MX_ADC1_Init(void)
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
-  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
   */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = 2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-  */
-  sConfig.Rank = 3;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_0;
+  sConfigInjected.InjectedRank = 1;
+  sConfigInjected.InjectedNbrOfConversion = 1;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+  sConfigInjected.AutoInjectedConv = DISABLE;
+  sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
+  sConfigInjected.InjectedOffset = 0;
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+  ADC_InjectionConfTypeDef sConfigInjected = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
+  */
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_4;
+  sConfigInjected.InjectedRank = 1;
+  sConfigInjected.InjectedNbrOfConversion = 1;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+  sConfigInjected.AutoInjectedConv = DISABLE;
+  sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
+  sConfigInjected.InjectedOffset = 0;
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc2, &sConfigInjected) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
+
+}
+
+/**
+  * @brief ADC3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC3_Init(void)
+{
+
+  /* USER CODE BEGIN ADC3_Init 0 */
+
+  /* USER CODE END ADC3_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+  ADC_InjectionConfTypeDef sConfigInjected = {0};
+
+  /* USER CODE BEGIN ADC3_Init 1 */
+
+  /* USER CODE END ADC3_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  */
+  hadc3.Instance = ADC3;
+  hadc3.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc3.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc3.Init.ScanConvMode = DISABLE;
+  hadc3.Init.ContinuousConvMode = DISABLE;
+  hadc3.Init.DiscontinuousConvMode = DISABLE;
+  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc3.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc3.Init.NbrOfConversion = 1;
+  hadc3.Init.DMAContinuousRequests = DISABLE;
+  hadc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
+  */
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_1;
+  sConfigInjected.InjectedRank = 1;
+  sConfigInjected.InjectedNbrOfConversion = 1;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+  sConfigInjected.AutoInjectedConv = DISABLE;
+  sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
+  sConfigInjected.InjectedOffset = 0;
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc3, &sConfigInjected) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC3_Init 2 */
+
+  /* USER CODE END ADC3_Init 2 */
 
 }
 
@@ -472,7 +614,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 14999;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 23;
+  htim1.Init.Period = 119;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -485,7 +627,7 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
@@ -539,22 +681,6 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
-}
-
-/** 
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void) 
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA2_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 3, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 
