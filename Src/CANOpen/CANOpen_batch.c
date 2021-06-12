@@ -18,7 +18,7 @@ int32_t OD_0x31_target_speed;
 static uint16_t cobID;
 static uint8_t txData[8];
 
-CO_Status Init_CAN()
+CO_Status Init_CAN(uint8_t Delay)
 {
   uint8_t Status[8] = {
       0,
@@ -30,13 +30,16 @@ CO_Status Init_CAN()
     // Shut down ->  Switch Down -> Enable Operation*/
     if (i < NumOfNode)
     {
-      if (CAN_NMT(Start_Remote_node, Node[i], 10) == Operational)
+      if (CAN_NMT(Start_Remote_node, Node[i], Delay) == Operational)
       {
         CAN_Device_Control(Shut_down, Node[i]);
+        HAL_Delay(Delay);
         CAN_Device_Control(Switch_on, Node[i]);
+        HAL_Delay(Delay);
         CAN_Device_Control(Enable_operation, Node[i]);
         Status[i] = 1;
       }
+      HAL_Delay(Delay);
     }
     else
     {
@@ -55,7 +58,7 @@ CO_Status Init_CAN()
   }
 }
 
-void Enter_RT_CAN(Control_Mode Ctrl_Mode)
+void Enter_RT_CAN(Control_Mode Ctrl_Mode, uint8_t Delay)
 {
   uint8_t Status[8] = {
       0,
@@ -88,7 +91,7 @@ void Enter_RT_CAN(Control_Mode Ctrl_Mode)
   }
 }
 
-void Zero_Pos(uint8_t time_out){
+void Zero_Pos(uint8_t Delay){
   uint8_t Status[8] = {
       0,
   };
@@ -109,6 +112,7 @@ void Zero_Pos(uint8_t time_out){
       Status[i] = 1;
     }
     sum = sum + Status[i];
+    HAL_Delay(Delay);
   }
   if (sum == 8) // If all the nodes initialization is done well, the 'sum' value would be 8.
   {
@@ -118,16 +122,18 @@ void Zero_Pos(uint8_t time_out){
       {
         CAN_Set_TargetValue(Cyclic_sync_pos,0x00000000,Node[i]);
       }
+      HAL_Delay(Delay);
     }
   }
 }
 
-void Reset_MotorDriver(){
+void Reset_MotorDriver(uint8_t Delay){
   for (uint8_t i = 0; i < 8; i++)
   {
     if (i < NumOfNode)
     {
       CAN_Device_Control(Shut_down,Node[i]);
+      HAL_Delay(Delay);
     }
   }
   // Reset the node
@@ -136,6 +142,7 @@ void Reset_MotorDriver(){
     if (i < NumOfNode)
     {
       CAN_NMT(Reset_node,Node[i],10);
+      HAL_Delay(Delay);
     }
   }
   CANOpen_sendSync();

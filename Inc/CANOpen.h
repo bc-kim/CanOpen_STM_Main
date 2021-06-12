@@ -20,6 +20,8 @@ typedef struct CO_PDOStruct{
   uint8_t mappinglen;
 }CO_PDOStruct;
 
+extern CO_Status CO_status;
+
 /*****************************************************************************/
 // CANOpen Interface Functions
 /*****************************************************************************/

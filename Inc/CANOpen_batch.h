@@ -4,10 +4,10 @@
 #include "CANOpen.h"
 #include <CANOpen_var.h>
 
-extern CO_Status Init_CAN();
-extern void Enter_RT_CAN(Control_Mode Ctrl_Mode);
-void Zero_Pos(uint8_t time_out);
-void Reset_MotorDriver();
+extern CO_Status Init_CAN(uint8_t Delay);
+extern void Enter_RT_CAN(Control_Mode Ctrl_Mode, uint8_t Delay);
+void Zero_Pos(uint8_t Delay);
+void Reset_MotorDriver(uint8_t Delay);
 extern void CAN_Device_Control(Control_word controlword, uint8_t Node);
 extern enum NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay);
 extern enum Control_Mode CAN_Check_ControlMode(uint8_t Node);

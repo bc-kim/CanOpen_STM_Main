@@ -1,6 +1,7 @@
 #include "CANOpen.h"
 
 #include <string.h>
+extern CO_Status CO_status = CO_OK;
 
 typedef struct CO_BUFFER{
   uint16_t cobID;

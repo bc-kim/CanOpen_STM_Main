@@ -5,7 +5,7 @@
 #include "stm32f4xx_hal.h"
 // Constant values
 
-#define NumOfNode 1
+#define NumOfNode 2
 
 typedef enum SDO_OP{
   Set_OP_mode,
@@ -90,7 +90,7 @@ extern uint16_t Load_pos[3];
 
 extern uint16_t adcValue[3];
 extern int32_t Pos[3];
-extern int32_t Torque[3];
+extern int16_t Torque[3];
 
 extern float A_Flexor;
 extern float A_Extensor;
@@ -111,6 +111,7 @@ extern float T_lbound[2];
 extern int32_t Pos_lbound[2];
 extern uint16_t Exp_Result;
 extern uint8_t Exp_finished;
+extern uint8_t Force_CO[6];
 
 #ifdef __cplusplus
 #endif

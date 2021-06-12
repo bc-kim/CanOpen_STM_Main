@@ -86,13 +86,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
     if (RxHeader.StdId == 0x281) // Flexor.
     {
       memcpy(&Pos[0],&RxData[0],4);
-      memcpy(&Torque[0], &RxData[4],4);
+      memcpy(&Torque[0], &RxData[4],2);
       // Load_pos[0] = Load[0];
     }
     else if (RxHeader.StdId == 0x283) // Extensor
     {
       memcpy(&Pos[1],&RxData[0],4);
-      memcpy(&Torque[1], &RxData[4], 4);
+      memcpy(&Torque[1], &RxData[4], 2);
       //Load_pos[1] = Load[1]; // In EG2, the loadcell is not used for the extensor.
       // Load_pos[1] = (Torque[0]*Torque[1])/Load_pos[0]; 
     }
@@ -100,7 +100,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interr
     else if (RxHeader.StdId == 0x285)
     {
       memcpy(&Pos[2],&RxData[0],4);
-      memcpy(&Torque[2], &RxData[4], 4);
+      memcpy(&Torque[2], &RxData[4], 2);
       // Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
     }
 
@@ -160,11 +160,12 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
     
     if (RealTime)
     {
-    
       // Motor 1 (Flexor)
-      Target_T[0] = MIN(A_Extensor * Pos[0] + B_Extensor, T_ubound[0]); // Float 4byte
-      Target_T[0] = MAX(Target_T[0],T_lbound[0]);
+      //Target_T[0] = MIN(A_Flexor * Pos[0] + B_Flexor, T_ubound[0]); // Float 4byte
+      //Target_T[0] = MAX(Target_T[0],T_lbound[0]);
+      //Target_T[0]
       memcpy(&Tension_error_before[0], &Tension_error[0], 4);
+      memcpy(&Force_CO[0],&adcValue[0],2);
       Tension_error[0] = Target_T[0] - adcValue[0];
       Target_Vel[0] = MIN((int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0])),Vel_ubound[0]);
       
@@ -179,21 +180,41 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
       CANOpen_sendPDO(0x01, 3, &rpdo1_3);
 
     // Motor 2 (Extensor)
-      // if (Pos[1] < Pos_ubound[1] && Pos[1] > Pos_lbound[1])
-      // {
-      //   Target_T[1] = MAX(A_Flexor * Pos[1] + B_Flexor, T_ubound[1]);
-      //   memcpy(&Tension_error_before[1], &Tension_error[1], 4);
-      //   Tension_error[1] = Target_T[1] - Load_pos[1];
-      //   Target_Vel[1] = (int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1]));
-      // }
-      // else
-      // {
-      //   Target_Vel[1] = 0;
-      // }
-//      CANOpen_sendPDO(0x03, 1, &rpdo2_3);
+      Target_T[1] = MIN(A_Extensor * Pos[0] + B_Extensor, T_ubound[1]); // Float 4byte
+      Target_T[1] = MAX(Target_T[1], T_lbound[1]);
+      memcpy(&Tension_error_before[1], &Tension_error[1], 4);
+      memcpy(&Force_CO[2], &adcValue[1], 2);
+      Tension_error[1] = Target_T[1] - adcValue[1];
+      Target_Vel[1] = MIN((int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1])), Vel_ubound[1]);
+
+      if (Pos[1] > Pos_ubound[1] && Target_Vel[1] > 0)
+      {
+        Target_Vel[1] = 0;
+      }
+      else if (Pos[1] < Pos_lbound[1] && Target_Vel[1] < 0)
+      {
+        Target_Vel[1] = 0;
+      }
+      CANOpen_sendPDO(0x03,3, &rpdo2_3);
 
       // Motor 3 (Experiment)
-      Exp_Result = MIN(Exp_Result, Load[2]);
+      Exp_Result = MIN(Exp_Result, adcValue[2]);
+      memcpy(&Force_CO[2], &adcValue[2], 2);
+      // if(abs(Pos[2] - Pos_Experiment[0]) < 3)
+      // {
+      //   position = Pos_Experiment[1];
+      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
+      //   Exp_finished++;
+      // }
+      // else if (abs(Pos[2] - Pos_Experiment[1]) < 3)
+      // {
+      //   position = Pos_Experiment[0];
+      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[0]
+      //   Exp_finished++;
+      // }
+      // Send ADC data
+      CANOpen_sendFrame(0x51, Force_CO, 6);
+      // Send sync
       CANOpen_sendSync();
     }
   }
@@ -275,16 +296,19 @@ int main(void)
     {
       switch(Input){
       case Init:
-        Init_CAN(); 
-        Input = Init_state; break;
+        //CO_status = Init_CAN(100); 
+        if(Init_CAN(50) == CO_OK){
+            Input = Init_state; break;
+        }
       case Button1: // Blue switch
-        Enter_RT_CAN(Profile_vel);
+        Enter_RT_CAN(Profile_vel,50);
+        // CAN_Set_ControlMode(Cyclic_sync_pos, 0x05); // For experiment 
         Input = Init_state; break;
       case Button2: // Lower switch (close to STM)
-        Zero_Pos(10);
+        Zero_Pos(50);
         Input = Init_state; break;
       case Button3: // Upper switch (Far from STM)
-        Reset_MotorDriver();
+        Reset_MotorDriver(50);
         Input = Init_state; break;
      }
     }
