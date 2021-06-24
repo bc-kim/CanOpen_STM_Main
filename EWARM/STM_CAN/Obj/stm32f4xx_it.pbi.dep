@@ -39,4 +39,5 @@ stm32f4xx_it.pbi: D:\SourceTree\STM\STM_CAN\Src\stm32f4xx_it.c \
   D:\SourceTree\STM\STM_CAN\EWARM/../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
   D:\SourceTree\STM\STM_CAN\EWARM/../Drivers/STM32F4xx_HAL_Driver/Inc\stm32f4xx_hal_tim.h \
   D:\SourceTree\STM\STM_CAN\EWARM/../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
+  D:\SourceTree\STM\STM_CAN\EWARM/../Drivers/STM32F4xx_HAL_Driver/Inc\stm32f4xx_hal_uart.h \
   D:\SourceTree\STM\STM_CAN\EWARM/../Inc\stm32f4xx_it.h

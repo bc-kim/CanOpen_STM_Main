@@ -28,7 +28,7 @@ extern float A_Extensor = 0.03;
 extern float B_Flexor = 50;
 extern float B_Extensor = 50;
 
-extern float Target_T[2] = {100, 1.0};
+extern float Target_T[2] = {150, 1.0};
 extern float Tension_error[2] = {1.0, 1.0};
 extern float Tension_error_before[2] = {1.0, 1.0};
 extern int32_t Target_Vel[2] = {1.0, 1.0};
