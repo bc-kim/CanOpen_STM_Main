@@ -245,10 +245,8 @@ StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay)
 {
   uint8_t check_data[4];
   CANOpen_readOD(Node, 0x6041, 0x00, check_data, &len, 1000);
-  //check_data_l = (uint8_t) check_data;
-  //check_data_h = (check_data-check_data_l)<<8;
-  //data = (uint16_t) check_data_l;
-  memcpy(&data,check_data,len);
+  //uint16_t Data_Bit;
+  memcpy(&data,check_data,len); // Data_Bit instead of data
   if (data == 0x21 || data == 0x31 || data == 0xa1 || data == 0xb1) //Ready to switch on
   {
     return SM_Ready_to_switch_on;

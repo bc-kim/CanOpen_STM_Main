@@ -77,6 +77,7 @@ static void MX_USART2_UART_Init(void);
 CO_PDOStruct tpdo2;
 CO_PDOStruct rpdo1_3;
 CO_PDOStruct rpdo2_3;
+CO_PDOStruct rpdo3_3;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -157,7 +158,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
   if(hadc ==&hadc1){
-    adcValue[0] = 4096 - ADC1->JDR1;
+    adcValue[0] = 4096- ADC1->JDR1;
     adcValue[1] = ADC2->JDR1;
     //adcValue[1] = ADC2->JDR1;
     adcValue[2] = ADC3->JDR1;
@@ -204,18 +205,30 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
       // Motor 3 (Experiment)
       Exp_Result = MIN(Exp_Result, adcValue[2]);
       memcpy(&Force_CO[2], &adcValue[1], 2);
-      // if(abs(Pos[2] - Pos_Experiment[0]) < 3)
-      // {
-      //   position = Pos_Experiment[1];
-      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
-      //   Exp_finished++;
-      // }
-      // else if (abs(Pos[2] - Pos_Experiment[1]) < 3)
-      // {
-      //   position = Pos_Experiment[0];
-      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[0]
-      //   Exp_finished++;
-      // }
+
+      if (Direction)
+      {
+          position = 10;
+          CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
+      }
+
+      if(~Direction)
+      {
+        position = 0;
+        CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[1]
+      }
+
+      // Check whether the motor reached to the target position or not.
+      CANOpen_readOD(0x05, 0x6041, 0x00, Read_OD_Data, &len, 1000);
+      memcpy(&Motor_Status, Read_OD_Data, len); // Data_Bit instead of data
+
+      if(Motor_Status&0x400==0x400)
+      {
+        Direction = ~Direction;
+        Exp_finished++;
+        //Target_Reached.
+      }
+
       // Send ADC data
       CANOpen_sendFrame(0x51, Force_CO, 6);
       // Send sync
@@ -288,7 +301,10 @@ int main(void)
   
   CANOpen_mappingPDO_init(&rpdo2_3);
   CANOpen_mappingPDO_int32(&rpdo2_3, &Target_Vel[1]);
-  
+
+  CANOpen_mappingPDO_init(&rpdo3_3);
+  CANOpen_mappingPDO_int32(&rpdo3_3, &position);
+
   Ctrl_Mode = Profile_vel;
   /* USER CODE END 2 */
  
@@ -308,7 +324,7 @@ int main(void)
         }
       case Button1: // Blue switch
         Enter_RT_CAN(Profile_vel,50);
-        // CAN_Set_ControlMode(Cyclic_sync_pos, 0x05); // For experiment 
+        CAN_Set_ControlMode(Cyclic_sync_pos, 0x05); // For experiment 
         Input = Init_state; break;
       case Button2: // Lower switch (close to STM)
         Zero_Pos(50);
@@ -323,7 +339,7 @@ int main(void)
     if(Timer_Flag)
     {
       /*Put extra functions for RT_control.*/
-      if(Exp_finished){ // when the experiment is finished, the loadcell data will be transferred.
+      if(Exp_finished == 5){ // when the experiment is finished, the loadcell data will be transferred.
         //uint8_t TxData_exp_result[8];
         //TxData_exp_result[8] = {1, 1, 1, 1, 1, 1, 1, 1};
         //CANOpen_sendFrame(0x51, TxData_exp_result, 0);
@@ -439,7 +455,7 @@ static void MX_ADC1_Init(void)
   sConfigInjected.InjectedChannel = ADC_CHANNEL_0;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
-  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_56CYCLES;
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
   sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
   sConfigInjected.AutoInjectedConv = DISABLE;
@@ -505,7 +521,7 @@ static void MX_ADC2_Init(void)
   sConfigInjected.InjectedChannel = ADC_CHANNEL_4;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
-  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_56CYCLES;
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
   sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
   sConfigInjected.AutoInjectedConv = DISABLE;
@@ -571,7 +587,7 @@ static void MX_ADC3_Init(void)
   sConfigInjected.InjectedChannel = ADC_CHANNEL_1;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
-  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_56CYCLES;
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
   sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
   sConfigInjected.AutoInjectedConv = DISABLE;

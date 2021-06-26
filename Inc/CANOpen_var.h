@@ -96,6 +96,9 @@ extern float A_Flexor;
 extern float A_Extensor;
 extern float B_Flexor;
 extern float B_Extensor;
+extern uint8_t Direction;
+extern uint8_t Read_OD_Data[4];
+extern uint8_t Motor_Status;
 
 extern float Target_T[2];
 extern float Tension_error[2];

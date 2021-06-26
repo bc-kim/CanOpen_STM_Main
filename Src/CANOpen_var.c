@@ -41,6 +41,9 @@ extern float T_ubound[2] = {1000.0, 2000.0};
 extern float T_lbound[2] = {50.0, 40.0};
 extern int32_t Pos_lbound[2] = {-10, -10};
 extern uint8_t Force_CO[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+extern uint8_t Read_OD_Data[4] = {0x00, 0x00, 0x00, 0x00};
+extern uint8_t Motor_Status = 0;
 
 extern uint16_t Exp_Result = 500;
 extern uint8_t Exp_finished = 1;
+extern uint8_t Direction = 1;
