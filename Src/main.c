@@ -158,11 +158,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
   if(hadc ==&hadc1){
-    adcValue[0] = 4096- ADC1->JDR1;
+    adcValue[0] = ADC1->JDR1;
     adcValue[1] = ADC2->JDR1;
     //adcValue[1] = ADC2->JDR1;
     adcValue[2] = ADC3->JDR1;
-    
+    Exp_finished = 1;
+    memcpy(&Force_CO[0],&adcValue[0],2);
+    memcpy(&Force_CO[2], &adcValue[1], 2);
+    memcpy(&Force_CO[4], &adcValue[2], 2);
+    CANOpen_sendFrame(0x51, Force_CO, 6);
     if (RealTime)
     {
       // Motor 1 (Flexor)
@@ -182,7 +186,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
       {
         Target_Vel[0] = 0;
       }
-      CANOpen_sendPDO(0x01, 3, &rpdo1_3);
+      CANOpen_sendPDO(0x01, 3, &rpdo1_3); 
 
     // Motor 2 (Extensor)
       Target_T[1] = MIN(A_Extensor * Pos[0] + B_Extensor, T_ubound[1]); // Float 4byte
@@ -205,35 +209,36 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
       // Motor 3 (Experiment)
       Exp_Result = MIN(Exp_Result, adcValue[2]);
       memcpy(&Force_CO[2], &adcValue[1], 2);
+      memcpy(&Force_CO[4], &adcValue[2], 2);
+      // if (Direction)
+      // {
+      //     position = 10;
+      //     CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
+      // }
 
-      if (Direction)
-      {
-          position = 10;
-          CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
-      }
+      // if(~Direction)
+      // {
+      //   position = 0;
+      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[1]
+      // }
 
-      if(~Direction)
-      {
-        position = 0;
-        CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[1]
-      }
+      // // Check whether the motor reached to the target position or not.
+      // CANOpen_readOD(0x05, 0x6041, 0x00, Read_OD_Data, &len, 1000);
+      // memcpy(&Motor_Status, Read_OD_Data, len); // Data_Bit instead of data
 
-      // Check whether the motor reached to the target position or not.
-      CANOpen_readOD(0x05, 0x6041, 0x00, Read_OD_Data, &len, 1000);
-      memcpy(&Motor_Status, Read_OD_Data, len); // Data_Bit instead of data
-
-      if(Motor_Status&0x400==0x400)
-      {
-        Direction = ~Direction;
-        Exp_finished++;
-        //Target_Reached.
-      }
+      // if(Motor_Status&0x400==0x400)
+      // {
+      //   Direction = ~Direction;
+      //   Exp_finished++;
+      //   //Target_Reached.
+      // }
 
       // Send ADC data
       CANOpen_sendFrame(0x51, Force_CO, 6);
       // Send sync
       CANOpen_sendSync();
       HAL_UART_Transmit(&huart2, &Force_CO[0], 2, 1000);
+      
     }
   }
 }
@@ -327,11 +332,26 @@ int main(void)
         CAN_Set_ControlMode(Cyclic_sync_pos, 0x05); // For experiment 
         Input = Init_state; break;
       case Button2: // Lower switch (close to STM)
-        Zero_Pos(50);
-        Input = Init_state; break;
+        //Zero_Pos(50);
+        //Input = Init_state; 
+          CAN_Set_ControlMode(Cyclic_sync_pos,0x01);
+          //CAN_Set_ControlMode(Cyclic_sync_pos,0x03);
+          CAN_Set_TargetValue(Cyclic_sync_pos,0x00,0x01);
+        break;
       case Button3: // Upper switch (Far from STM)
-        Reset_MotorDriver(50);
-        Input = Init_state; break;
+        //Reset_MotorDriver(50);
+        //Input = Init_state; break;
+        if(Exp_finished==1)
+        {
+          CANOpen_sendFrame(0x51, Force_CO, 6);
+          CANOpen_sendSync();
+          Exp_finished = 0;
+          CAN_Set_ControlMode(Cyclic_sync_pos,0x01);
+          CAN_Set_ControlMode(Cyclic_sync_pos,0x03);
+          CAN_Set_TargetValue(Cyclic_sync_pos,0x00,0x01);
+          //position = 0x204E;
+          CAN_Set_TargetValue(Cyclic_sync_pos,position,0x03);
+        }
      }
     }
   else

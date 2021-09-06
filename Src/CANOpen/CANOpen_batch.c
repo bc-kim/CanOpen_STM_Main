@@ -120,7 +120,12 @@ void Zero_Pos(uint8_t Delay){
     {
       if (i < NumOfNode)
       {
+        if(i==2){
+          CAN_Set_TargetValue(Cyclic_sync_pos,0x000020000,Node[i]);
+        }
+        else{
         CAN_Set_TargetValue(Cyclic_sync_pos,0x00000000,Node[i]);
+        }
       }
       HAL_Delay(Delay);
     }
