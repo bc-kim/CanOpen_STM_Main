@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under BSD 3-Clause license,
+ * the "License"; You may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at:
+ *                        opensource.org/licenses/BSD-3-Clause
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -56,6 +56,7 @@ CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart2;
 
@@ -72,71 +73,79 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
+static void MX_TIM3_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-CO_PDOStruct tpdo2;
-CO_PDOStruct rpdo1_3;
-CO_PDOStruct rpdo2_3;
-CO_PDOStruct rpdo3_3;
+CO_PDOStruct Tpdo1_N1;
+CO_PDOStruct Tpdo2_N1;
+CO_PDOStruct Tpdo3_N1;
+CO_PDOStruct Tpdo4_N1;
+CO_PDOStruct Rpdo1_N1;
+CO_PDOStruct Rpdo2_N1;
+CO_PDOStruct Rpdo3_N1;
+CO_PDOStruct Rpdo4_N1;
+
+typedef struct CO_MOTOR
+{
+  uint8_t id;
+  CO_PDOStruct TPDO[4];
+  CO_PDOStruct RPDO[4];
+} CO_MOTOR;
+
+CO_MOTOR motor_[4];
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) //HAL_Can interrupt
+uint8_t Pos_limit_flag[4] = {0,0,0,0};
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can interrupt
 {
-    if (hcan->Instance == CAN1)
+  uint8_t node;
+  if (hcan->Instance == CAN1)
   {
     HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
-    if (RxHeader.StdId == 0x281) // Flexor.
+    if (RxHeader.StdId == 0x51) // Save the motion profile
     {
-      memcpy(&Pos[0],&RxData[0],4);
-      memcpy(&Torque[0], &RxData[4],2);
-      // Load_pos[0] = Load[0];
-    }
-    else if (RxHeader.StdId == 0x283) // Extensor
-    {
-      memcpy(&Pos[1],&RxData[0],4);
-      memcpy(&Torque[1], &RxData[4], 2);
-      //Load_pos[1] = Load[1]; // In EG2, the loadcell is not used for the extensor.
-      // Load_pos[1] = (Torque[0]*Torque[1])/Load_pos[0]; 
-    }
-
-    else if (RxHeader.StdId == 0x285)
-    {
-      memcpy(&Pos[2],&RxData[0],4);
-      memcpy(&Torque[2], &RxData[4], 2);
-      // Load_pos[2] = Load[2]; // update the loadcell data to Load_pos -> For more accurate sync of the position and load.
-    }
-
-    else if (RxHeader.StdId == 0x55)
-    {
-      memcpy(&A_Extensor, &RxData[0], 4);
-      memcpy(&B_Extensor, &RxData[4], 4);
-    }
-
-    else if (RxHeader.StdId == 0x56)
-    {
-      memcpy(&A_Flexor, &RxData[0], 4);
-      memcpy(&B_Flexor, &RxData[4], 4);
     }
     
-    else{
-        CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    else if(RxHeader.StdId > 0x480 && RxHeader.StdId < 0x500)
+    {
+      node = RxHeader.StdId - 0x480;
+      memcpy(&Pos_check[node - 1], &RxData[0], 4);
+      if (Pos_check[node - 1] < Pos_lbound_hard[node - 1])
+      {
+        Pos_limit_flag[node-1] =1;
+      }
+
+      else if (Pos_check[node - 1] > Pos_ubound_hard[node - 1])
+      {
+        Pos_limit_flag[node-1] =2;
+      }
+    }
+
+    else
+    {
+      CANOpen_addRxBuffer(RxHeader.StdId, RxData);
     }
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim == &htim2)
+  if (htim == &htim2)
   {
     CANOpen_timerLoop();
+  }
+  else if (htim == &htim3)
+  {
   }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == GPIO_PIN_13) // Blue switch
+  if (GPIO_Pin == GPIO_PIN_13) // Blue switch
   {
     Input = Button1;
   }
@@ -154,91 +163,130 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
-
-void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
+void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-  if(hadc ==&hadc1){
+  uint8_t i;
+  uint8_t adc_read = 1;
+  uint8_t Flag_RT = 0;
+  if (hadc == &hadc1)
+  {
     adcValue[0] = ADC1->JDR1;
     adcValue[1] = ADC2->JDR1;
-    //adcValue[1] = ADC2->JDR1;
     adcValue[2] = ADC3->JDR1;
-    Exp_finished = 1;
-    memcpy(&Force_CO[0],&adcValue[0],2);
+
+    memcpy(&Force_CO[0], &adcValue[0], 2);
     memcpy(&Force_CO[2], &adcValue[1], 2);
     memcpy(&Force_CO[4], &adcValue[2], 2);
-    CANOpen_sendFrame(0x51, Force_CO, 6);
-    if (RealTime)
+    
+    if (Input == RT_on)
     {
-      // Motor 1 (Flexor)
-      //Target_T[0] = MIN(A_Flexor * Pos[0] + B_Flexor, T_ubound[0]); // Float 4byte
-      //Target_T[0] = MAX(Target_T[0],T_lbound[0]);
-      //Target_T[0]
-      memcpy(&Tension_error_before[0], &Tension_error[0], 4);
-      memcpy(&Force_CO[0],&adcValue[0],2);
-      Tension_error[0] = Target_T[0] - adcValue[0];
-      Target_Vel[0] = MIN((int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0])),Vel_ubound[0]);
-      
-      if(Pos[0] > Pos_ubound[0] && Target_Vel[0] >0)
+      CANOpen_sendFrame(0x51,Force_CO,6, 0);
+      for (i = 1; i < 5; i++)
       {
-        Target_Vel[0] = 0;
+        State[i - 1] = State[i - 1] + 1;
+        if (State[i - 1] == 1) // Ask Motor initial data
+        {
+          CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]);
+          CAN_Ask_CurrentValue(Con_Mode[i - 1], Node[i - 1]);
+          Flag_RT = 0;
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET);
+        }
+        else if (State[i - 1] < 3 && State[i-1]>1) // Read Motor initial data
+        {
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET);
+          if (Con_Mode[i - 1] == Cyclic_sync_pos) // Position
+          {
+            CANOpen_readPDO(Node[i - 1], 1, &motor_[i - 1].TPDO[0], 2);
+            memcpy(&Desired_start_PV[i - 1],&Pos[i - 1],4);
+          }
+          else if (Con_Mode[i - 1] == Cyclic_sync_vel) // Velocity
+          {
+            CANOpen_readPDO(Node[i - 1], 2, &motor_[i - 1].TPDO[1], 2);
+            memcpy(&Desired_start_PV[i - 1],&Vel[i - 1],4);
+          }
+          else if (Con_Mode[i - 1] == Admittance) // Admittance
+          {
+            Desired_start_A[i - 1] = adcValue[adc_read];
+          }
+          else if (Con_Mode[i - 1] == Cyclic_sync_tor) // Force
+          {
+            CANOpen_readPDO(Node[i - 1], 3, &motor_[i - 1].TPDO[2], 2);
+            memcpy(&Desired_start_F[i - 1],&Torque[i - 1],2);
+          }
+          Flag_RT = 0;
+        }
+        else if (State[i - 1] < Duration_motor[i - 1] && State[i - 1] > 2) // Start Motor control
+        {
+          Flag_RT = 1;
+          if (Con_Mode[i - 1] == Cyclic_sync_pos) // Position
+          {
+            //Target_Pos[i - 1] = Desired_start_PV[i - 1] + (State[i - 1] * (Desired_input_PV[i - 1] - Desired_start_PV[i - 1]))/ Duration_motor[i - 1];
+            Target_Pos[i-1]=Desired_input_PV[i-1];
+            if(Target_Pos[i -1] > Pos_ubound[i-1])
+            {
+              Target_Pos[i-1] = Pos_ubound[i-1];
+            }
+            else if(Target_Pos[i-1] < Pos_lbound[i-1])
+            {
+              Target_Pos[i-1] = Pos_lbound[i-1];
+            }
+            CANOpen_sendPDO(Node[i-1],2,&motor_[i-1].RPDO[1]);
+          }
+          else if (Con_Mode[i - 1] == Cyclic_sync_vel) // Velocity
+          {
+            Target_Vel[i - 1] = Desired_start_PV[i - 1] + (State[i - 1] * (Desired_input_PV[i - 1] - Desired_start_PV[i - 1]))/ Duration_motor[i - 1];
+            
+            if (Target_Vel[i - 1] >0 && Pos_check[i-1]> Pos_ubound[i - 1])
+            {
+              Target_Vel[i - 1] = 0;
+            }
+            else if (Target_Vel[i - 1] <0 && Pos_check[i - 1] < Pos_lbound[i - 1])
+            {
+              Target_Vel[i - 1] = 0;
+            }
+            CANOpen_sendPDO(Node[i-1], 3, &motor_[i-1].RPDO[2]);
+          }
+          else if (Con_Mode[i - 1] == Admittance) // Admittance
+          {
+            //Desired_A[i - 1] = Desired_start_A[i - 1] + (State[i - 1] * (Desired_input_A[i - 1] - Desired_start_A[i - 1]))/ Duration_motor[i - 1];
+            Desired_A[i-1] = Desired_input_A[i-1];
+            Tension_error[i-1] = (float)(Desired_A[i-1] - adcValue[adc_read]);
+            Target_Vel[i - 1] = MIN((int32_t)(kp[i-1] * Tension_error[i-1] + kd[i-1] * (Tension_error[i-1] - Tension_error_before[i-1])), Vel_ubound[i-1]);
+            memcpy(&Tension_error_before[i-1],&Tension_error[i-1],4);
+
+            if (Target_Vel[i - 1] > 0 && Pos_check[i - 1] > Pos_ubound[i - 1])
+            {
+              Target_Vel[i - 1] = 0;
+            }
+            else if (Target_Vel[i - 1] < 0 && Pos_check[i - 1] < Pos_lbound[i - 1])
+            {
+              Target_Vel[i - 1] = 0;
+            }
+            CANOpen_sendPDO(Node[i-1], 3, &motor_[i-1].RPDO[2]);
+          }
+          else if (Con_Mode[i - 1] == Cyclic_sync_tor) // Force
+          {
+            Target_Tor[i - 1] = Desired_start_F[i - 1] + (State[i - 1] * (Desired_input_F[i - 1] - Desired_start_F[i - 1]))/ Duration_motor[i - 1];
+            if (Target_Tor[i - 1] > 0 && Pos_check[i - 1] > Pos_ubound[i - 1])
+            {
+              Target_Tor[i - 1] = 0;
+            }
+            else if (Target_Tor[i - 1] < 0 && Pos_check[i - 1] < Pos_lbound[i - 1])
+            {
+              Target_Tor[i - 1] = 0;
+            }
+            CANOpen_sendPDO(Node[i-1], 4, &motor_[i-1].RPDO[3]);
+          }
+        }
+        else
+        {
+          State[i-1] = 0;
+        }
+        if(Flag_RT)
+        {
+        CANOpen_sendSync();
+        }
       }
-      else if(Pos[0] < Pos_lbound[0] && Target_Vel[0] <0)
-      {
-        Target_Vel[0] = 0;
-      }
-      CANOpen_sendPDO(0x01, 3, &rpdo1_3); 
-
-    // Motor 2 (Extensor)
-      Target_T[1] = MIN(A_Extensor * Pos[0] + B_Extensor, T_ubound[1]); // Float 4byte
-      Target_T[1] = MAX(Target_T[1], T_lbound[1]);
-      memcpy(&Tension_error_before[1], &Tension_error[1], 4);
-      memcpy(&Force_CO[2], &adcValue[1], 2);
-      Tension_error[1] = Target_T[1] - adcValue[1];
-      Target_Vel[1] = MIN((int32_t)(kp[1] * Tension_error[1] + kd[1] * (Tension_error[1] - Tension_error_before[1])), Vel_ubound[1]);
-
-      if (Pos[1] > Pos_ubound[1] && Target_Vel[1] > 0)
-      {
-        Target_Vel[1] = 0;
-      }
-      else if (Pos[1] < Pos_lbound[1] && Target_Vel[1] < 0)
-      {
-        Target_Vel[1] = 0;
-      }
-      CANOpen_sendPDO(0x03,3, &rpdo2_3);
-
-      // Motor 3 (Experiment)
-      Exp_Result = MIN(Exp_Result, adcValue[2]);
-      memcpy(&Force_CO[2], &adcValue[1], 2);
-      memcpy(&Force_CO[4], &adcValue[2], 2);
-      // if (Direction)
-      // {
-      //     position = 10;
-      //     CANOpen_sendPDO(0x05, 3, &rpdo3_3);   // Go to Pos_Experiment[1]
-      // }
-
-      // if(~Direction)
-      // {
-      //   position = 0;
-      //   CANOpen_sendPDO(0x05, 3, &rpdo3_3); // Go to Pos_Experiment[1]
-      // }
-
-      // // Check whether the motor reached to the target position or not.
-      // CANOpen_readOD(0x05, 0x6041, 0x00, Read_OD_Data, &len, 1000);
-      // memcpy(&Motor_Status, Read_OD_Data, len); // Data_Bit instead of data
-
-      // if(Motor_Status&0x400==0x400)
-      // {
-      //   Direction = ~Direction;
-      //   Exp_finished++;
-      //   //Target_Reached.
-      // }
-
-      // Send ADC data
-      CANOpen_sendFrame(0x51, Force_CO, 6);
-      // Send sync
-      CANOpen_sendSync();
-      HAL_UART_Transmit(&huart2, &Force_CO[0], 2, 1000);
-      
     }
   }
 }
@@ -249,6 +297,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
   * @brief  The application entry point.
   * @retval int
   */
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -280,37 +329,74 @@ int main(void)
   MX_TIM2_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
+  MX_TIM3_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  // Timer interrupt starts
-  HAL_TIM_Base_Start_IT(&htim1);
-  HAL_ADCEx_InjectedStart_IT(&hadc1);
-  HAL_ADCEx_InjectedStart(&hadc2);
-  HAL_ADCEx_InjectedStart(&hadc3);
+  // [[ 1. Init CAN ]]
+  CAN_FilterTypeDef sFilterConfig;
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_16BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
 
-  CAN_Filter_Init();
+  if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
   if (HAL_CAN_Start(&hcan1) != HAL_OK)
   {
     Error_Handler();
   }
 
-  // Pdo setting
-  CANOpen_mappingPDO_init(&tpdo2);
-  CANOpen_mappingPDO_int32(&tpdo2, &position);
-  CANOpen_mappingPDO_int32(&tpdo2, &velocity);
-  
-  CANOpen_mappingPDO_init(&rpdo1_3);
-  CANOpen_mappingPDO_int32(&rpdo1_3, &Target_Vel[0]);
-  
-  CANOpen_mappingPDO_init(&rpdo2_3);
-  CANOpen_mappingPDO_int32(&rpdo2_3, &Target_Vel[1]);
+  // [[ 2. Init CAN timerloop ]]
+  HAL_TIM_Base_Start_IT(&htim2);
 
-  CANOpen_mappingPDO_init(&rpdo3_3);
-  CANOpen_mappingPDO_int32(&rpdo3_3, &position);
+  // [[ 3. Init PDO mapping ]]
+  CANOpen_init();
+  for (uint8_t i = 0; i < 4; i++)
+  {
+    CANOpen_mappingPDO_init(&motor_[i].TPDO[0]);
+    CANOpen_mappingPDO_int32(&motor_[i].TPDO[0], &Pos[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].TPDO[1]);
+    CANOpen_mappingPDO_int32(&motor_[i].TPDO[1], &Vel[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].TPDO[2]);
+    CANOpen_mappingPDO_int16(&motor_[i].TPDO[2], &Torque[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].TPDO[3]);
+    CANOpen_mappingPDO_int32(&motor_[i].TPDO[3], &Pos_check[i]);
+    CANOpen_mappingPDO_uint16(&motor_[i].TPDO[3], &StatusWord[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].RPDO[0]);
+    CANOpen_mappingPDO_uint16(&motor_[i].RPDO[0], &ControlWord[i]);
+    
+    CANOpen_mappingPDO_init(&motor_[i].RPDO[1]);
+    //CANOpen_mappingPDO_uint16(&motor_[i].RPDO[1], &ControlWord[i]);
+    CANOpen_mappingPDO_int32(&motor_[i].RPDO[1], &Target_Pos[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].RPDO[2]);
+    CANOpen_mappingPDO_int32(&motor_[i].RPDO[2], &Target_Vel[i]);
+
+    CANOpen_mappingPDO_init(&motor_[i].RPDO[3]);
+    CANOpen_mappingPDO_int16(&motor_[i].RPDO[3], &Target_Tor[i]);
+  }
 
   Ctrl_Mode = Profile_vel;
+
+  // [[4 . Start Main timer ]]
+  HAL_TIM_Base_Start(&htim1);
+  HAL_ADCEx_InjectedStart_IT(&hadc1);
+  HAL_ADCEx_InjectedStart(&hadc2);
+  HAL_ADCEx_InjectedStart(&hadc3);
   /* USER CODE END 2 */
  
  
@@ -321,57 +407,53 @@ int main(void)
   {
     if (!RealTime)
     {
-      switch(Input){
+      switch (Input)
+      {
       case Init:
-        //CO_status = Init_CAN(100); 
-        if(Init_CAN(50) == CO_OK){
-            Input = Init_state; break;
-        }
-      case Button1: // Blue switch
-        Enter_RT_CAN(Profile_vel,50);
-        CAN_Set_ControlMode(Cyclic_sync_pos, 0x05); // For experiment 
-        Input = Init_state; break;
-      case Button2: // Lower switch (close to STM)
-        //Zero_Pos(50);
-        //Input = Init_state; 
-          CAN_Set_ControlMode(Cyclic_sync_pos,0x01);
-          //CAN_Set_ControlMode(Cyclic_sync_pos,0x03);
-          CAN_Set_TargetValue(Cyclic_sync_pos,0x00,0x01);
-        break;
-      case Button3: // Upper switch (Far from STM)
-        //Reset_MotorDriver(50);
-        //Input = Init_state; break;
-        if(Exp_finished==1)
+        // CO_status = Init_CAN(100);
+        if (Init_CAN(50) == CO_OK)
         {
-          CANOpen_sendFrame(0x51, Force_CO, 6);
-          CANOpen_sendSync();
-          Exp_finished = 0;
-          CAN_Set_ControlMode(Cyclic_sync_pos,0x01);
-          CAN_Set_ControlMode(Cyclic_sync_pos,0x03);
-          CAN_Set_TargetValue(Cyclic_sync_pos,0x00,0x01);
-          //position = 0x204E;
-          CAN_Set_TargetValue(Cyclic_sync_pos,position,0x03);
+          Input = Init_state;
+          break;
         }
-     }
-    }
-  else
-  {
-    if(Timer_Flag)
-    {
-      /*Put extra functions for RT_control.*/
-      if(Exp_finished == 5){ // when the experiment is finished, the loadcell data will be transferred.
-        //uint8_t TxData_exp_result[8];
-        //TxData_exp_result[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-        //CANOpen_sendFrame(0x51, TxData_exp_result, 0);
+      case Button1: // Blue switch : Start RT control
+        //Enter_RT_CAN(Profile_vel, 50);
+        Input = RT_on;
+        break;
+      case Button2: // Lower switch (close to STM) // 
+        for (uint8_t i = 0; i < 4; i++)
+        {
+          CAN_Set_ControlMode(Cyclic_sync_pos, Node[i]); // Set to the position control mode
+          CAN_Set_TargetValue(Cyclic_sync_pos, 0x00, Node[i]); // Go to initial position.
+        }
+        Input = Init_state;
+        break;
+      case Button3: // Upper switch (Far from STM) -- Emergency Reset : Stop the controller
+        Reset_MotorDriver(50);
+        Input = Init_state;
+        break;
       }
-      /*Put extra functions for RT_control.*/
+    }
+  for (uint8_t i = 0; i < 4; i++)
+  {
+    if(Pos_limit_flag[i] == 1) // lbound
+    { 
+      CAN_Set_ControlMode(Cyclic_sync_pos, Node[i-1]); // 1
+      CAN_Set_TargetValue(Cyclic_sync_pos, Pos_lbound[i-1], Node[i-1]); // Go to initial position.
+      CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]); // 1
+      
+    }
+    else if(Pos_limit_flag[i] == 2) //ubound
+    {
+      CAN_Set_ControlMode(Cyclic_sync_pos, i); //2
+      CAN_Set_TargetValue(Cyclic_sync_pos, Pos_ubound[i-1], Node[i-1]); // Go to initial position.
+      CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]); // 1
     }
   }
-  
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-      
   }
   /* USER CODE END 3 */
 }
@@ -725,9 +807,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
+  htim2.Init.Prescaler = 1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 5999;
+  htim2.Init.Period = 44999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -748,6 +830,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 59999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
@@ -803,7 +930,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13|GPIO_PIN_14, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6|GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -831,6 +958,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PC11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -838,7 +972,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-extern void CAN_Filter_Init(void)
+/*extern void CAN_Filter_Init(void)
 {
   CAN_FilterTypeDef sFilterConfig;
   sFilterConfig.FilterBank = 0;
@@ -856,7 +990,7 @@ extern void CAN_Filter_Init(void)
   {
     Error_Handler();
   }
-}
+}*/
 /* USER CODE END 4 */
 
 /**

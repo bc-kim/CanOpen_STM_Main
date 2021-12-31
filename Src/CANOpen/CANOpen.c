@@ -1,15 +1,15 @@
 #include "CANOpen.h"
+#include "CANOpen_list.h"
 
 #include <string.h>
-extern CO_Status CO_status = CO_OK;
 
-typedef struct CO_BUFFER{
-  uint16_t cobID;
-  uint8_t data[8];
-  uint8_t valid;
-  uint16_t timeout;
-}CO_BUFFER;
-static CO_BUFFER rxBuffer[CO_BUFLEN];
+static CO_LIST general_buff[CO_BUFLEN];
+static CO_LIST general_empty_head;
+static CO_LIST general_filled_head;
+
+static CO_LIST tpdo_buff[CO_BUFLEN];
+static CO_LIST tpdo_empty_head;
+static CO_LIST tpdo_filled_head;
 
 static uint16_t cobID;
 static uint8_t txData[8];
@@ -20,8 +20,61 @@ CO_Status CANOpen_sendSync(){
   cobID = 0x80;
   
   // Send frame
-  CANOpen_sendFrame(cobID, txData, 0);
+  CANOpen_sendFrame(cobID, txData, 0, 0);
   
+  return CO_OK;
+}
+
+CO_Status CANOpen_sendTpdoRTR(uint8_t nodeId, uint8_t channel){
+  // Create TPDO RTR frame
+  switch(channel){
+    case 1 : cobID = 0x180; break;
+    case 2 : cobID = 0x280; break;
+    case 3 : cobID = 0x380; break;
+    case 4 : cobID = 0x480; break;
+    default : return CO_ERROR;
+  }
+  cobID |= nodeId;
+  
+  // Send frame
+  CANOpen_sendFrame(cobID, txData, 0, 1);
+  
+  return CO_OK;
+}
+
+CO_Status CANOpen_NMT(CO_NMT state, uint8_t id){
+
+  uint8_t data[8];
+  uint8_t len;
+
+  switch(state){
+    case CO_RESET :
+    data[0] = 0x81; data[1] = id;
+    break;
+
+    case CO_COMMRESET :
+    data[0] = 0x82; data[1] = id;
+    break;
+
+    case CO_STOPPED :
+    data[0] = 0x02; data[1] = id;
+    break;
+
+    case CO_PREOP :
+    data[0] = 0x80; data[1] = id;
+    break;
+
+    case CO_OP :
+    data[0] = 0x01; data[1] = id;
+    break;
+
+    default :
+    return CO_ERROR;
+  }
+
+  len = 2;
+  CANOpen_sendFrame(0x00, data, len, 0);
+
   return CO_OK;
 }
 
@@ -32,7 +85,6 @@ CO_Status CANOpen_writeOD(uint8_t nodeId,
                    uint8_t len,
                    uint16_t timeout)
 {
-  uint16_t i;
   
   if(len > 4) len = 4; // Only support expedited transfer
   if(len == 0) return CO_OK;
@@ -48,22 +100,27 @@ CO_Status CANOpen_writeOD(uint8_t nodeId,
   memcpy(txData + 4, data, len);
   
   // Send frame
-  CANOpen_sendFrame(cobID, txData, 8);
+  CANOpen_sendFrame(cobID, txData, 8, 0);
   
   if(timeout == 0) return CO_OK;
   
   tx_timeout = timeout;
   while(tx_timeout != 0){
-    // Find Valid response
-    for(i = 0; i < CO_BUFLEN; i++){
-      if(rxBuffer[i].valid == 0) continue;
-      if(rxBuffer[i].cobID != (nodeId | 0x0580)) continue;
-      if(rxBuffer[i].data[0] != 0x60) continue;
-      if(rxBuffer[i].data[1] != txData[1]) continue;
-      if(rxBuffer[i].data[2] != txData[2]) continue;
-      if(rxBuffer[i].data[3] != txData[3]) continue;
-      
-      rxBuffer[i].valid = 0;
+    // Find Valid response from filled list
+    CO_LIST *filled_entry = &general_filled_head;
+
+    while(filled_entry->next != &general_filled_head && filled_entry->next != &general_empty_head){
+      filled_entry = filled_entry->next;
+      if(filled_entry->cobID != (nodeId | 0x0580)) continue;
+      if(filled_entry->data[0] != 0x60) continue;
+      if(filled_entry->data[1] != txData[1]) continue;
+      if(filled_entry->data[2] != txData[2]) continue;
+      if(filled_entry->data[3] != txData[3]) continue;
+
+      CANOpen_mutexLock();
+      CANOpen_list_del(filled_entry);
+      CANOpen_list_add_prev(filled_entry, &general_empty_head);
+      CANOpen_mutexUnlock();
       return CO_OK;
     }
   }
@@ -74,13 +131,11 @@ CO_Status CANOpen_writeOD(uint8_t nodeId,
 CO_Status CANOpen_readOD(uint8_t nodeId,
                      uint16_t Index,
                      uint8_t subIndex,
-                     uint8_t data[4],
+                     uint8_t* data,
                      uint8_t* len,
                      uint16_t timeout)
 {
-  
-  uint16_t i;
-  
+    
   // Create rxSDO frame
   cobID = (uint16_t)(nodeId & 0x7F);
   cobID |= 0x0600;
@@ -91,23 +146,31 @@ CO_Status CANOpen_readOD(uint8_t nodeId,
   memset(txData + 4, 0, 4);
 
   // Send frame
-  CANOpen_sendFrame(cobID, txData, 8);
+  CANOpen_sendFrame(cobID, txData, 8, 0);
   
   tx_timeout = timeout;
   while(tx_timeout != 0){
-    // Find Valid response
-    for(i = 0; i < CO_BUFLEN; i++){
-      if(rxBuffer[i].valid == 0) continue;
-      if(rxBuffer[i].cobID != (nodeId | 0x0580)) continue;
-      if((rxBuffer[i].data[0] & 0x43) != 0x43) continue;
-      if(rxBuffer[i].data[1] != txData[1]) continue;
-      if(rxBuffer[i].data[2] != txData[2]) continue;
-      if(rxBuffer[i].data[3] != txData[3]) continue;
+    // Find Valid response from filled list
+    CO_LIST *filled_entry = &general_filled_head;
+
+    while(filled_entry->next != &general_filled_head && filled_entry->next != &general_empty_head){
+      filled_entry = filled_entry->next;
+      if(filled_entry->cobID != (nodeId | 0x0580)) continue;
+      if((filled_entry->data[0] & 0x43) != 0x43) continue;
+      if(filled_entry->data[1] != txData[1]) continue;
+      if(filled_entry->data[2] != txData[2]) continue;
+      if(filled_entry->data[3] != txData[3]) continue;
+
+      CANOpen_mutexLock();
+
+      if(len != NULL && data != NULL){
+        *len = 4 - ((filled_entry->data[0] & 0x0C) >> 2);
+        memcpy(data, filled_entry->data + 4, *len);        
+      }
       
-      *len = 4 - ((rxBuffer[i].data[0] & 0x0C) >> 2);
-      memcpy(data, rxBuffer[i].data + 4, *len);
-      
-      rxBuffer[i].valid = 0;
+      CANOpen_list_del(filled_entry);
+      CANOpen_list_add_prev(filled_entry, &general_empty_head);
+      CANOpen_mutexUnlock();
       return CO_OK;
     }
   }
@@ -131,7 +194,7 @@ CO_Status CANOpen_sendPDO(uint8_t nodeId, uint8_t channel, CO_PDOStruct* pdo_str
   }
   
   uint64_t tmp64 = 0;
-  uint8_t i;
+  uint16_t i;
   uint8_t bytelen;
   
   uint8_t total_bit = 0;
@@ -159,7 +222,7 @@ CO_Status CANOpen_sendPDO(uint8_t nodeId, uint8_t channel, CO_PDOStruct* pdo_str
 
   // Send frame
   total_byte = (total_bit - 1) /8 + 1;
-  CANOpen_sendFrame(cobID, txData, total_byte);
+  CANOpen_sendFrame(cobID, txData, total_byte, 0);
   
   return CO_OK;
 }
@@ -171,7 +234,7 @@ CO_Status CANOpen_readPDO(uint8_t nodeId, uint8_t channel, CO_PDOStruct* pdo_str
   
   uint16_t cobID_target = nodeId;
   uint64_t tmp64 = 0;
-  uint8_t i, j;
+  uint16_t j;
   uint8_t bytelen;
   
   switch(channel){
@@ -183,21 +246,30 @@ CO_Status CANOpen_readPDO(uint8_t nodeId, uint8_t channel, CO_PDOStruct* pdo_str
   
   tx_timeout = timeout;
   while(tx_timeout != 0){
-    // Find Valid frame
-    for(i = 0; i < CO_BUFLEN; i++){
-      if(rxBuffer[i].valid == 0) continue;
-      if(rxBuffer[i].cobID != cobID_target) continue;
-      
-      memcpy(&tmp64, rxBuffer[i].data, 8);
+    // Find Valid frame filled list
+    CO_LIST *tpdo_entry = &tpdo_filled_head;
+
+    while(tpdo_entry->next != &tpdo_filled_head && tpdo_entry->next != &tpdo_empty_head){
+
+      tpdo_entry = tpdo_entry->next;
+      if(tpdo_entry->cobID != cobID_target) continue;
+
+      CANOpen_mutexLock();    
+
+      memcpy(&tmp64, tpdo_entry->data, 8);
       for(j = 0; j < pdo_struct->mappinglen; j++){
         bytelen = (pdo_struct->bitlen[j] - 1) / 8 + 1;
         memcpy(pdo_struct->data[j], &tmp64, bytelen);
         tmp64 = tmp64 >> pdo_struct->bitlen[j];
       }
-      rxBuffer[i].valid = 0;
+
+      CANOpen_list_del(tpdo_entry);
+      CANOpen_list_add_prev(tpdo_entry, &tpdo_empty_head);
+      CANOpen_mutexUnlock();
       return CO_OK;
     }
   }
+
   timeout_cnt++;
   return CO_TIMEOUT;
 }
@@ -269,30 +341,77 @@ void CANOpen_mappingPDO_int8(CO_PDOStruct* pdo_struct, int8_t* data){
 }
 
 
+void CANOpen_init(){
+  CANOpen_list_init(&general_filled_head);
+  CANOpen_list_init(&general_empty_head);
+
+  CANOpen_list_init(&tpdo_filled_head);
+  CANOpen_list_init(&tpdo_empty_head);
+
+  int i;
+  for(i = 0; i < CO_BUFLEN; i++){
+    CANOpen_list_add_prev(&general_buff[i], &general_empty_head);
+    CANOpen_list_add_prev(&tpdo_buff[i], &tpdo_empty_head);
+  }
+}
+
 void CANOpen_addRxBuffer(uint16_t cobID, uint8_t* data){
 
-  uint16_t i;
-  for(i = 0; i < CO_BUFLEN; i++){
-    if(rxBuffer[i].valid == 0){
-      rxBuffer[i].timeout = CO_RX_TIMEOUT;
-      rxBuffer[i].cobID = cobID;
-      memcpy(rxBuffer[i].data, data, 8);
-      rxBuffer[i].valid = 1;
-      return;
+  uint16_t fcode = (cobID & 0x780) >> 7;
+
+  CANOpen_mutexLock();
+  
+  if(fcode > 2 && fcode < 11 && (fcode % 2) == 1){ // [[ TPDO frame ]]
+
+    // Search from empty list
+    CO_LIST *empty_entry = tpdo_empty_head.next;
+    if(empty_entry == &tpdo_empty_head){
+      // If no empty entry delete oldest filled entry
+      empty_entry = tpdo_filled_head.prev;
     }
+
+    CANOpen_list_del(empty_entry);
+
+    // Copy data
+    empty_entry->cobID = cobID;
+    memcpy(empty_entry->data, data, 8);
+
+    // Save only one TPDO per some channel of ID
+    CO_LIST *tpdo_entry = &tpdo_filled_head;
+    while(tpdo_entry->next != &tpdo_filled_head){
+      tpdo_entry = tpdo_entry->next;
+      if(tpdo_entry->cobID == cobID){
+        CANOpen_list_del(tpdo_entry);
+        CANOpen_list_add_prev(tpdo_entry, &tpdo_empty_head);
+        break;
+      }
+    }
+    CANOpen_list_add_next(empty_entry, &tpdo_filled_head); 
+
+  }else{ // [[ Normal frame ]]
+
+    // Search from empty list
+    CO_LIST *empty_entry = general_empty_head.next;
+    if(empty_entry == &general_empty_head){
+      // If no empty entry delete oldest filled entry
+      empty_entry = general_filled_head.prev;
+    }
+
+    CANOpen_list_del(empty_entry);
+
+    // Copy data
+    empty_entry->cobID = cobID;
+    memcpy(empty_entry->data, data, 8);
+
+    CANOpen_list_add_next(empty_entry, &general_filled_head);    
   }
+
+  CANOpen_mutexUnlock();
   
 }
 
 void CANOpen_timerLoop(){ // Should be call every 1ms
   
-  uint16_t i;
   if(tx_timeout != 0) tx_timeout --;
-  for(i = 0; i < CO_BUFLEN; i++){
-    if(rxBuffer[i].valid == 1){
-      if(rxBuffer[i].timeout != 0) rxBuffer[i].timeout --;
-      if(rxBuffer[i].timeout == 0) rxBuffer[i].valid = 0;
-    }
-  }
-  
+
 }

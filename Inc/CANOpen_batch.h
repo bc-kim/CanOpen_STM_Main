@@ -14,7 +14,10 @@ extern enum Control_Mode CAN_Check_ControlMode(uint8_t Node);
 extern enum StateMachine CAN_Device_Status(uint8_t Node, uint8_t Delay);
 extern void CAN_Set_ControlMode(Control_Mode controlmode, uint8_t Node);
 extern void CAN_Set_TargetValue(Control_Mode controlmode, uint32_t data, uint8_t Node);
-
+extern void CAN_Ask_CurrentValue(Control_Mode controlmode, uint8_t node);
+extern void CAN_Send_ControlInput(Control_Mode controlmode, int32_t PV, uint8_t node, int32_t Position_Lim);
+extern void CAN_Send_ControlInput_int16(Control_Mode controlmode, int16_t PV, uint8_t node, int32_t Position_Lim);
+extern int32_t Admittance_Desired(uint16_t ADC_input);
 // uint8_t CAN_NMT_CTR();
 // 0x22 PDO Objects
 extern CO_PDOStruct readPDO_0x22;
