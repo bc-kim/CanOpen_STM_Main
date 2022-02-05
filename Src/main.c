@@ -87,6 +87,7 @@ CO_PDOStruct Rpdo4_N1;
 
 typedef struct CO_MOTOR
 {
+  
   uint8_t id;
   CO_PDOStruct TPDO[4];
   CO_PDOStruct RPDO[4];
