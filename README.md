@@ -8,6 +8,10 @@
 - 아직 검증이 안됐음.
 - Target Value를 배열로 입력하면 그 값들 차근차근 갈수 있도록 짰는데 확인이 필요함.
 
+**[ControlModePreset/DesiredForcePreset/DesiredValuePreset추가2] 커밋**
+
+- Target값들을 그냥 선언하면 안되고 memcpy로 해야하는 것 같아서 memcpy로 작성
+- memcpy(&motor_[i].Con_Mode[0], &Con_ModePreset[0], 40); 이런식으로 짬.
 
 **[220321_기존 실험 코드 업로드] 커밋**
 
