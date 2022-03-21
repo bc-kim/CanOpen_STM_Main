@@ -87,6 +87,10 @@ CO_PDOStruct Rpdo4_N1;
 
 typedef struct CO_MOTOR
 {
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
   uint8_t id;
   CO_PDOStruct TPDO[4];
   CO_PDOStruct RPDO[4];
@@ -127,6 +131,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can inter
 
     else
     {
+<<<<<<< HEAD
+=======
+      
+>>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
       CANOpen_addRxBuffer(RxHeader.StdId, RxData);
     }
   }
@@ -368,10 +376,17 @@ int main(void)
 
     CANOpen_mappingPDO_init(&motor_[i].TPDO[1]);
     CANOpen_mappingPDO_int32(&motor_[i].TPDO[1], &Vel[i]);
+<<<<<<< HEAD
 
     CANOpen_mappingPDO_init(&motor_[i].TPDO[2]);
     CANOpen_mappingPDO_int16(&motor_[i].TPDO[2], &Torque[i]);
 
+=======
+
+    CANOpen_mappingPDO_init(&motor_[i].TPDO[2]);
+    CANOpen_mappingPDO_int16(&motor_[i].TPDO[2], &Torque[i]);
+
+>>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
     CANOpen_mappingPDO_init(&motor_[i].TPDO[3]);
     CANOpen_mappingPDO_int32(&motor_[i].TPDO[3], &Pos_check[i]);
     CANOpen_mappingPDO_uint16(&motor_[i].TPDO[3], &StatusWord[i]);
