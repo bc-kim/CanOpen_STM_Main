@@ -460,6 +460,7 @@ int main(void)
     }
     else if(Pos_limit_flag[i] == 2) //ubound
     {
+      
       CAN_Set_ControlMode(Cyclic_sync_pos, i); //2
       CAN_Set_TargetValue(Cyclic_sync_pos, Pos_ubound[i-1], Node[i-1]); // Go to initial position.
       CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]); // 1
