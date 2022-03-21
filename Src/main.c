@@ -93,6 +93,9 @@ CO_MOTOR motor_[4];
 /* USER CODE BEGIN 0 */
 
 uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
+Control_Mode Con_ModePreset[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+uint16_t DesiredForcePreset[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int32_t DesiredValuePreset[10] = {0,0,0,0,0,0,0,0,0,0};
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can interrupt
 {
@@ -401,6 +404,10 @@ int main(void)
 
     CANOpen_mappingPDO_init(&motor_[i].RPDO[3]);
     CANOpen_mappingPDO_int16(&motor_[i].RPDO[3], &Target_Tor[i]);
+
+    memcpy(&motor_[i].Con_Mode[0], &Con_ModePreset[0], 40);
+    memcpy(&motor_[i].DesiredForce[0], &DesiredForcePreset[0], 20);
+    memcpy(&motor_[i].DesiredValue[0], &DesiredValuePreset[0], 40);
   }
 
   Ctrl_Mode = Profile_vel;

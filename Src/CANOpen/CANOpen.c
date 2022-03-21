@@ -340,7 +340,6 @@ void CANOpen_mappingPDO_int8(CO_PDOStruct* pdo_struct, int8_t* data){
   CANOpen_mappingPDO(pdo_struct, data, 8);
 }
 
-
 void CANOpen_init(){
   CANOpen_list_init(&general_filled_head);
   CANOpen_list_init(&general_empty_head);
