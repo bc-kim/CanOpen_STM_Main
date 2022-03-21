@@ -12,19 +12,6 @@ typedef enum SDO_OP{
   Device_Control,
 }SDO_OP;
 
-typedef enum Control_Mode
-{
-  error,
-  Profile_pos,
-  Profile_vel,
-  Cyclic_sync_pos,
-  Cyclic_sync_vel,
-  Voltage,
-  Homing,
-  Cyclic_sync_tor,
-  Admittance,
-} Control_Mode;
-
 typedef enum StateMachine
 {
   SM_Ready_to_switch_on,
@@ -73,11 +60,13 @@ typedef enum Input_Status{
   RT_on,
   Reached,
 }Input_Status;
+
 extern int32_t Pos_ubound_hard[4];
 extern int32_t Pos_lbound_hard[4];
 extern Control_Mode Ctrl_Mode;
 extern Control_Mode Con_Mode[4];
-// Related to the CAN communication in low level
+extern Control_Mode Con_Mode_Prev[4];
+extern Control_Mode Con_Mode_input[4];
 extern CAN_HandleTypeDef CanHandle;
 extern CAN_RxHeaderTypeDef RxHeader;
 extern uint8_t RxData[8];
@@ -141,6 +130,7 @@ extern float T_ubound[2];
 extern float T_lbound[2];
 extern int32_t Pos_lbound[4];
 extern uint8_t Force_CO[6];
+//extern CO_MOTOR motor_[4];
 
 #ifdef __cplusplus
 #endif

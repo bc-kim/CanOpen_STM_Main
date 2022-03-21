@@ -31,6 +31,41 @@ typedef struct CO_PDOStruct{
   uint8_t mappinglen;
 }CO_PDOStruct;
 
+typedef enum PDO_Status
+{
+  PDO_CV_Waiting,
+  PDO_CV_Received, // PDO_CV
+  PDO_CV_Converged,
+  PDO_DV_Updated,
+  PDO_DV_Sent,
+  PDO_CV_NotConverged,
+  PDO_error,
+} PDO_Status;
+
+typedef enum Control_Mode
+{
+  error,
+  Profile_pos,
+  Profile_vel,
+  Cyclic_sync_pos,
+  Cyclic_sync_vel,
+  Voltage,
+  Homing,
+  Cyclic_sync_tor,
+  Admittance,
+} Control_Mode;
+
+typedef struct CO_MOTOR
+{
+  uint8_t id;
+  CO_PDOStruct TPDO[4];
+  CO_PDOStruct RPDO[4];
+  PDO_Status PDO_Status;
+  Control_Mode Con_Mode[10];
+  int32_t DesiredValue[10];
+  uint16_t DesiredForce[10];
+} CO_MOTOR;
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 /*****************************************************************************/

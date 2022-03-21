@@ -2,7 +2,7 @@
 
 "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\arm\bin\armstlink2.dll" 
 
-"D:\STM_CA\EWARM\STM_CAN\Exe\STM_CAN.out" 
+"D:\git\CanOpen_STM\EWARM\STM_CAN\Exe\STM_CAN.out" 
 
 --plugin="C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\arm\bin\armbat.dll" 
 

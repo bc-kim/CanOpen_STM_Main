@@ -85,24 +85,14 @@ CO_PDOStruct Rpdo2_N1;
 CO_PDOStruct Rpdo3_N1;
 CO_PDOStruct Rpdo4_N1;
 
-typedef struct CO_MOTOR
-{
-<<<<<<< HEAD
-=======
-  
->>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
-  uint8_t id;
-  CO_PDOStruct TPDO[4];
-  CO_PDOStruct RPDO[4];
-} CO_MOTOR;
-
 CO_MOTOR motor_[4];
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t Pos_limit_flag[4] = {0,0,0,0};
+
+uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can interrupt
 {
@@ -113,28 +103,45 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can inter
     if (RxHeader.StdId == 0x51) // Save the motion profile
     {
     }
-    
-    else if(RxHeader.StdId > 0x480 && RxHeader.StdId < 0x500)
+
+    else if (RxHeader.StdId > 0x480 && RxHeader.StdId < 0x500) // PDO#4
     {
       node = RxHeader.StdId - 0x480;
       memcpy(&Pos_check[node - 1], &RxData[0], 4);
+      // Pos_limit_flag[node-1] = Pos_Limit(Pos_check[node-1],Pos_lbound_hard[node-1],Pos_ubound_hard[node-1]);
       if (Pos_check[node - 1] < Pos_lbound_hard[node - 1])
       {
-        Pos_limit_flag[node-1] =1;
+        Pos_limit_flag[node - 1] = 1;
       }
-
       else if (Pos_check[node - 1] > Pos_ubound_hard[node - 1])
       {
-        Pos_limit_flag[node-1] =2;
+        Pos_limit_flag[node - 1] = 2;
       }
+      CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    }
+    else if (RxHeader.StdId > 0x180 && RxHeader.StdId < 0x200)
+    {
+      node = RxHeader.StdId - 0x180;
+      motor_[node - 1].PDO_Status = PDO_CV_Received;
+      CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    }
+
+    else if (RxHeader.StdId > 0x280 && RxHeader.StdId < 0x300)
+    {
+      node = RxHeader.StdId - 0x280;
+      motor_[node - 1].PDO_Status = PDO_CV_Received;
+      CANOpen_addRxBuffer(RxHeader.StdId, RxData);
+    }
+
+    else if (RxHeader.StdId > 0x380 && RxHeader.StdId < 0x400)
+    {
+      node = RxHeader.StdId - 0x380;
+      motor_[node - 1].PDO_Status = PDO_CV_Received;
+      CANOpen_addRxBuffer(RxHeader.StdId, RxData);
     }
 
     else
     {
-<<<<<<< HEAD
-=======
-      
->>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
       CANOpen_addRxBuffer(RxHeader.StdId, RxData);
     }
   }
@@ -171,11 +178,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
+uint8_t UserButton = 0;
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
   uint8_t i;
   uint8_t adc_read = 1;
   uint8_t Flag_RT = 0;
+  static int32_t DesiredValue = 0;
+  static int32_t DesiredValue_prev = 0;
+
+  uint8_t Automotive = 0; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
+
   if (hadc == &hadc1)
   {
     adcValue[0] = ADC1->JDR1;
@@ -185,115 +198,108 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
     memcpy(&Force_CO[0], &adcValue[0], 2);
     memcpy(&Force_CO[2], &adcValue[1], 2);
     memcpy(&Force_CO[4], &adcValue[2], 2);
-    
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET);
+    Flag_RT = 1;
     if (Input == RT_on)
     {
-      CANOpen_sendFrame(0x51,Force_CO,6, 0);
+      CANOpen_sendFrame(0x51, Force_CO, 6, 0); // SendForceData
+      static uint8_t j = 1;
       for (i = 1; i < 5; i++)
       {
-        State[i - 1] = State[i - 1] + 1;
-        if (State[i - 1] == 1) // Ask Motor initial data
+        // 1.1 UpdateDesiredCM/Values in automotive case
+        if (Automotive)
         {
-          CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]);
-          CAN_Ask_CurrentValue(Con_Mode[i - 1], Node[i - 1]);
-          Flag_RT = 0;
-          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET);
+          if (motor_[i - 1].PDO_Status == PDO_DV_Sent)
+          {
+            // 1.1.1 SetControlMode
+            Con_Mode_Prev[i - 1] = Con_Mode[i - 1];
+            Con_Mode[i - 1] = motor_[i - 1].Con_Mode[j - 1];
+            // 1.1.2 SetDesiredValue
+            if (Con_Mode[i - 1] == Admittance)
+            {
+              Desired_A[i - 1] = motor_[i - 1].DesiredForce[j - 1];
+              Tension_error[i - 1] = (float)(Desired_A[i - 1] - adcValue[adc_read]);
+              DesiredValue_prev = DesiredValue;
+              DesiredValue = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
+              memcpy(&Tension_error_before[i - 1], &Tension_error[i - 1], 4);
+            }
+            else
+            {
+              DesiredValue_prev = DesiredValue;
+              DesiredValue = motor_[i - 1].DesiredValue[j - 1];
+            }
+            motor_[i - 1].PDO_Status = PDO_DV_Updated;
+          }
         }
-        else if (State[i - 1] < 3 && State[i-1]>1) // Read Motor initial data
-        {
-          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET);
-          if (Con_Mode[i - 1] == Cyclic_sync_pos) // Position
-          {
-            CANOpen_readPDO(Node[i - 1], 1, &motor_[i - 1].TPDO[0], 2);
-            memcpy(&Desired_start_PV[i - 1],&Pos[i - 1],4);
-          }
-          else if (Con_Mode[i - 1] == Cyclic_sync_vel) // Velocity
-          {
-            CANOpen_readPDO(Node[i - 1], 2, &motor_[i - 1].TPDO[1], 2);
-            memcpy(&Desired_start_PV[i - 1],&Vel[i - 1],4);
-          }
-          else if (Con_Mode[i - 1] == Admittance) // Admittance
-          {
-            Desired_start_A[i - 1] = adcValue[adc_read];
-          }
-          else if (Con_Mode[i - 1] == Cyclic_sync_tor) // Force
-          {
-            CANOpen_readPDO(Node[i - 1], 3, &motor_[i - 1].TPDO[2], 2);
-            memcpy(&Desired_start_F[i - 1],&Torque[i - 1],2);
-          }
-          Flag_RT = 0;
-        }
-        else if (State[i - 1] < Duration_motor[i - 1] && State[i - 1] > 2) // Start Motor control
-        {
-          Flag_RT = 1;
-          if (Con_Mode[i - 1] == Cyclic_sync_pos) // Position
-          {
-            //Target_Pos[i - 1] = Desired_start_PV[i - 1] + (State[i - 1] * (Desired_input_PV[i - 1] - Desired_start_PV[i - 1]))/ Duration_motor[i - 1];
-            Target_Pos[i-1]=Desired_input_PV[i-1];
-            if(Target_Pos[i -1] > Pos_ubound[i-1])
-            {
-              Target_Pos[i-1] = Pos_ubound[i-1];
-            }
-            else if(Target_Pos[i-1] < Pos_lbound[i-1])
-            {
-              Target_Pos[i-1] = Pos_lbound[i-1];
-            }
-            CANOpen_sendPDO(Node[i-1],2,&motor_[i-1].RPDO[1]);
-          }
-          else if (Con_Mode[i - 1] == Cyclic_sync_vel) // Velocity
-          {
-            Target_Vel[i - 1] = Desired_start_PV[i - 1] + (State[i - 1] * (Desired_input_PV[i - 1] - Desired_start_PV[i - 1]))/ Duration_motor[i - 1];
-            
-            if (Target_Vel[i - 1] >0 && Pos_check[i-1]> Pos_ubound[i - 1])
-            {
-              Target_Vel[i - 1] = 0;
-            }
-            else if (Target_Vel[i - 1] <0 && Pos_check[i - 1] < Pos_lbound[i - 1])
-            {
-              Target_Vel[i - 1] = 0;
-            }
-            CANOpen_sendPDO(Node[i-1], 3, &motor_[i-1].RPDO[2]);
-          }
-          else if (Con_Mode[i - 1] == Admittance) // Admittance
-          {
-            //Desired_A[i - 1] = Desired_start_A[i - 1] + (State[i - 1] * (Desired_input_A[i - 1] - Desired_start_A[i - 1]))/ Duration_motor[i - 1];
-            Desired_A[i-1] = Desired_input_A[i-1];
-            Tension_error[i-1] = (float)(Desired_A[i-1] - adcValue[adc_read]);
-            Target_Vel[i - 1] = MIN((int32_t)(kp[i-1] * Tension_error[i-1] + kd[i-1] * (Tension_error[i-1] - Tension_error_before[i-1])), Vel_ubound[i-1]);
-            memcpy(&Tension_error_before[i-1],&Tension_error[i-1],4);
 
-            if (Target_Vel[i - 1] > 0 && Pos_check[i - 1] > Pos_ubound[i - 1])
-            {
-              Target_Vel[i - 1] = 0;
-            }
-            else if (Target_Vel[i - 1] < 0 && Pos_check[i - 1] < Pos_lbound[i - 1])
-            {
-              Target_Vel[i - 1] = 0;
-            }
-            CANOpen_sendPDO(Node[i-1], 3, &motor_[i-1].RPDO[2]);
-          }
-          else if (Con_Mode[i - 1] == Cyclic_sync_tor) // Force
+        // 1.2 UpdateDesiredCM/Values in manual case
+        else if (Automotive == 0)
+        {
+          if (UserButton == 1)
           {
-            Target_Tor[i - 1] = Desired_start_F[i - 1] + (State[i - 1] * (Desired_input_F[i - 1] - Desired_start_F[i - 1]))/ Duration_motor[i - 1];
-            if (Target_Tor[i - 1] > 0 && Pos_check[i - 1] > Pos_ubound[i - 1])
+            // 1.2.1 SetControlMode
+            Con_Mode_Prev[i - 1] = Con_Mode[i - 1];
+            Con_Mode[i - 1] = Con_Mode_input[i - 1];
+            if (i == 4)
             {
-              Target_Tor[i - 1] = 0;
+              UserButton = 0;
             }
-            else if (Target_Tor[i - 1] < 0 && Pos_check[i - 1] < Pos_lbound[i - 1])
+            // 1.2.2 SetDesiredValue
+            if (Con_Mode[i - 1] == Admittance)
             {
-              Target_Tor[i - 1] = 0;
+              Desired_A[i - 1] = Desired_input_A[i - 1];
+              Tension_error[i - 1] = (float)(Desired_input_A[i - 1] - adcValue[adc_read]);
+              DesiredValue_prev = DesiredValue;
+              DesiredValue = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
+              memcpy(&Tension_error_before[i - 1], &Tension_error[i - 1], 4);
             }
-            CANOpen_sendPDO(Node[i-1], 4, &motor_[i-1].RPDO[3]);
+            else
+            {
+              Desired_PV[i - 1] = Desired_input_PV[i - 1];
+              DesiredValue_prev = DesiredValue;
+              DesiredValue = Desired_PV[i - 1];
+            }
+            motor_[i - 1].PDO_Status = PDO_DV_Updated;
           }
         }
-        else
+
+        if (motor_[i - 1].PDO_Status == PDO_DV_Updated)
         {
-          State[i-1] = 0;
+          // 2. CANSetControlMode
+          if (Con_Mode[i - 1] != Con_Mode_Prev[i - 1])
+          {
+            CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]); //
+          }
+          // 3. AskCurrentValue
+          CAN_Ask_CurrentValue(Con_Mode[i - 1], Node[i - 1]); // Ask the current value until the motor reaches to the target value.
+          motor_[i - 1].PDO_Status = PDO_CV_Waiting;
         }
-        if(Flag_RT)
+
+        // 4. Check the convergence
+        // while(motor_[i-1].PDO_Status == PDO_CV_Waiting)
+        //{
+        //}
+
+        if (motor_[i - 1].PDO_Status == PDO_CV_Received || motor_[i - 1].PDO_Status == PDO_CV_NotConverged)
         {
+          motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev, &motor_[i - 1]);
+          if (j == 1)
+          {
+            motor_[i - 1].PDO_Status = PDO_CV_Converged;
+          }
+        }
+        CAN_Send_DesiredValue(Con_Mode[i - 1], Node[i - 1], DesiredValue, &motor_[i - 1]);
+        motor_[i - 1].PDO_Status = PDO_DV_Sent;
+        // 5. SendDesiredValue
+        if (motor_[0].PDO_Status == PDO_CV_Converged && motor_[1].PDO_Status == PDO_CV_Converged && motor_[2].PDO_Status == PDO_CV_Converged && motor_[3].PDO_Status == PDO_CV_Converged)
+        {
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET);
+          j++;
+        }
+      }
+      if (Flag_RT)
+      {
         CANOpen_sendSync();
-        }
       }
     }
   }
@@ -302,16 +308,15 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 
 int main(void)
 {
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -376,26 +381,19 @@ int main(void)
 
     CANOpen_mappingPDO_init(&motor_[i].TPDO[1]);
     CANOpen_mappingPDO_int32(&motor_[i].TPDO[1], &Vel[i]);
-<<<<<<< HEAD
 
     CANOpen_mappingPDO_init(&motor_[i].TPDO[2]);
     CANOpen_mappingPDO_int16(&motor_[i].TPDO[2], &Torque[i]);
 
-=======
-
-    CANOpen_mappingPDO_init(&motor_[i].TPDO[2]);
-    CANOpen_mappingPDO_int16(&motor_[i].TPDO[2], &Torque[i]);
-
->>>>>>> 45943ebef3cfe133ce54386ef7c5620aee332a65
     CANOpen_mappingPDO_init(&motor_[i].TPDO[3]);
     CANOpen_mappingPDO_int32(&motor_[i].TPDO[3], &Pos_check[i]);
     CANOpen_mappingPDO_uint16(&motor_[i].TPDO[3], &StatusWord[i]);
 
     CANOpen_mappingPDO_init(&motor_[i].RPDO[0]);
     CANOpen_mappingPDO_uint16(&motor_[i].RPDO[0], &ControlWord[i]);
-    
+
     CANOpen_mappingPDO_init(&motor_[i].RPDO[1]);
-    //CANOpen_mappingPDO_uint16(&motor_[i].RPDO[1], &ControlWord[i]);
+    // CANOpen_mappingPDO_uint16(&motor_[i].RPDO[1], &ControlWord[i]);
     CANOpen_mappingPDO_int32(&motor_[i].RPDO[1], &Target_Pos[i]);
 
     CANOpen_mappingPDO_init(&motor_[i].RPDO[2]);
@@ -413,8 +411,6 @@ int main(void)
   HAL_ADCEx_InjectedStart(&hadc2);
   HAL_ADCEx_InjectedStart(&hadc3);
   /* USER CODE END 2 */
- 
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -432,13 +428,13 @@ int main(void)
           break;
         }
       case Button1: // Blue switch : Start RT control
-        //Enter_RT_CAN(Profile_vel, 50);
+        // Enter_RT_CAN(Profile_vel, 50);
         Input = RT_on;
         break;
-      case Button2: // Lower switch (close to STM) // 
+      case Button2: // Lower switch (close to STM) //
         for (uint8_t i = 0; i < 4; i++)
         {
-          CAN_Set_ControlMode(Cyclic_sync_pos, Node[i]); // Set to the position control mode
+          CAN_Set_ControlMode(Cyclic_sync_pos, Node[i]);       // Set to the position control mode
           CAN_Set_TargetValue(Cyclic_sync_pos, 0x00, Node[i]); // Go to initial position.
         }
         Input = Init_state;
@@ -449,23 +445,21 @@ int main(void)
         break;
       }
     }
-  for (uint8_t i = 0; i < 4; i++)
-  {
-    if(Pos_limit_flag[i] == 1) // lbound
-    { 
-      CAN_Set_ControlMode(Cyclic_sync_pos, Node[i-1]); // 1
-      CAN_Set_TargetValue(Cyclic_sync_pos, Pos_lbound[i-1], Node[i-1]); // Go to initial position.
-      CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]); // 1
-      
-    }
-    else if(Pos_limit_flag[i] == 2) //ubound
+    for (uint8_t i = 0; i < 4; i++)
     {
-      
-      CAN_Set_ControlMode(Cyclic_sync_pos, i); //2
-      CAN_Set_TargetValue(Cyclic_sync_pos, Pos_ubound[i-1], Node[i-1]); // Go to initial position.
-      CAN_Set_ControlMode(Con_Mode[i-1], Node[i-1]); // 1
+      if (Pos_limit_flag[i] == 1) // lbound
+      {
+        CAN_Set_ControlMode(Cyclic_sync_pos, Node[i - 1]);                    // 1
+        CAN_Set_TargetValue(Cyclic_sync_pos, Pos_lbound[i - 1], Node[i - 1]); // Go to initial position.
+        CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]);                    // 1
+      }
+      else if (Pos_limit_flag[i] == 2) // ubound
+      {
+        CAN_Set_ControlMode(Cyclic_sync_pos, i);                              // 2
+        CAN_Set_TargetValue(Cyclic_sync_pos, Pos_ubound[i - 1], Node[i - 1]); // Go to initial position.
+        CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]);                    // 1
+      }
     }
-  }
 
     /* USER CODE END WHILE */
 
@@ -475,20 +469,20 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
-  */
+  /** Configure the main internal regulator output voltage
+   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
-  */
+  /** Initializes the CPU, AHB and APB busses clocks
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -502,16 +496,15 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Activate the Over-Drive mode 
-  */
+  /** Activate the Over-Drive mode
+   */
   if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  /** Initializes the CPU, AHB and APB busses clocks
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -524,10 +517,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC1_Init(void)
 {
 
@@ -541,8 +534,8 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-  */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
@@ -559,8 +552,8 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-  */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -568,8 +561,8 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
-  */
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time
+   */
   sConfigInjected.InjectedChannel = ADC_CHANNEL_0;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
@@ -586,14 +579,13 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
-  * @brief ADC2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC2_Init(void)
 {
 
@@ -607,8 +599,8 @@ static void MX_ADC2_Init(void)
   /* USER CODE BEGIN ADC2_Init 1 */
 
   /* USER CODE END ADC2_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-  */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+   */
   hadc2.Instance = ADC2;
   hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc2.Init.Resolution = ADC_RESOLUTION_12B;
@@ -625,8 +617,8 @@ static void MX_ADC2_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-  */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -634,8 +626,8 @@ static void MX_ADC2_Init(void)
   {
     Error_Handler();
   }
-  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
-  */
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time
+   */
   sConfigInjected.InjectedChannel = ADC_CHANNEL_4;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
@@ -652,14 +644,13 @@ static void MX_ADC2_Init(void)
   /* USER CODE BEGIN ADC2_Init 2 */
 
   /* USER CODE END ADC2_Init 2 */
-
 }
 
 /**
-  * @brief ADC3 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC3 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC3_Init(void)
 {
 
@@ -673,8 +664,8 @@ static void MX_ADC3_Init(void)
   /* USER CODE BEGIN ADC3_Init 1 */
 
   /* USER CODE END ADC3_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-  */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+   */
   hadc3.Instance = ADC3;
   hadc3.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc3.Init.Resolution = ADC_RESOLUTION_12B;
@@ -691,8 +682,8 @@ static void MX_ADC3_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-  */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -700,8 +691,8 @@ static void MX_ADC3_Init(void)
   {
     Error_Handler();
   }
-  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
-  */
+  /** Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time
+   */
   sConfigInjected.InjectedChannel = ADC_CHANNEL_1;
   sConfigInjected.InjectedRank = 1;
   sConfigInjected.InjectedNbrOfConversion = 1;
@@ -718,14 +709,13 @@ static void MX_ADC3_Init(void)
   /* USER CODE BEGIN ADC3_Init 2 */
 
   /* USER CODE END ADC3_Init 2 */
-
 }
 
 /**
-  * @brief CAN1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief CAN1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_CAN1_Init(void)
 {
 
@@ -755,14 +745,13 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
-  * @brief TIM1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM1_Init(void)
 {
 
@@ -801,14 +790,13 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
-
 }
 
 /**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM2_Init(void)
 {
 
@@ -846,14 +834,13 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
 }
 
 /**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM3_Init(void)
 {
 
@@ -891,14 +878,13 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -924,14 +910,13 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -943,10 +928,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13|GPIO_PIN_14, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13 | GPIO_PIN_14, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6|GPIO_PIN_11, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -955,13 +940,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB12 PB15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_15;
+  GPIO_InitStruct.Pin = GPIO_PIN_12 | GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB13 PB14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
+  GPIO_InitStruct.Pin = GPIO_PIN_13 | GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -984,7 +969,6 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
 
 /* USER CODE BEGIN 4 */
@@ -1010,9 +994,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -1021,16 +1005,16 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

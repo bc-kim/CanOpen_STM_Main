@@ -7,6 +7,9 @@ CAN_RxHeaderTypeDef RxHeader;
 
 extern Control_Mode Ctrl_Mode = Profile_pos;
 extern Control_Mode Con_Mode[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern Control_Mode Con_Mode_Prev[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern Control_Mode Con_Mode_input[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+//extern CO_MOTOR motor_[4];
 extern uint8_t Input = 0;
 extern uint8_t RealTime = 0;
 extern uint8_t Timer_Flag = 0;
