@@ -20,7 +20,7 @@
         <LeaveTargetRunning>_ 0</LeaveTargetRunning>
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>2487524733</Checksum>
+        <Checksum>783884595</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -56,6 +56,9 @@
         <ITMportsLogFile>0</ITMportsLogFile>
         <ITMlogFile>$PROJ_DIR$\ITM.log</ITMlogFile>
     </SWOTraceHWSettings>
+    <array_types>
+        <Fmt0>uint8_t[10]	3	0</Fmt0>
+    </array_types>
     <watch_formats>
         <Fmt0>{W}42:data	4	0</Fmt0>
     </watch_formats>
@@ -133,7 +136,8 @@
         <Count>0</Count>
     </Breakpoints2>
     <Aliases>
-        <Count>0</Count>
-        <SuppressDialog>0</SuppressDialog>
+        <A0>_ "D:\SourceTree\STM\STM_CAN_Thumb\Src\stm32f4xx_it.c" "D:\STM_CA\Src\stm32f4xx_it.c"</A0>
+        <Count>1</Count>
+        <SuppressDialog>1</SuppressDialog>
     </Aliases>
 </settings>

@@ -57,6 +57,51 @@ CO_Status Init_CAN(uint8_t Delay)
     return CO_ERROR;
   }
 }
+void CAN_Send_ControlInput(Control_Mode controlmode, int32_t PV, uint8_t node, int32_t Position_Lim)
+{
+  if (controlmode == Cyclic_sync_pos) // Position
+  {
+    Target_Pos[node-1] = PV;
+  }
+  else if (controlmode == Cyclic_sync_vel) // Velocity
+  {
+    Target_Vel[node-1] = PV;
+  }
+
+}
+
+void CAN_Send_ControlInput_int16(Control_Mode controlmode, int16_t PV, uint8_t node, int32_t Position_Lim){
+  CAN_Send_ControlInput(controlmode, (int32_t)PV, node, Position_Lim);
+}
+
+int32_t Admittance_Desired(uint16_t ADC_input)
+{
+  int32_t Target_Vel;
+  Target_Vel = (int32_t)(kp[0] * Tension_error[0] + kd[0] * (Tension_error[0] - Tension_error_before[0]));
+
+  return Target_Vel;
+}
+
+void CAN_Ask_CurrentValue(Control_Mode Con_Mode, uint8_t node)
+{
+  uint16_t cobID = 0x00;
+  if (Con_Mode == Cyclic_sync_pos) // Position
+  {
+    cobID = (uint16_t)node + 0x180;
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
+  }
+  else if (Con_Mode == Cyclic_sync_vel) // Velocity
+  {
+    cobID = (uint16_t)node + 0x280;
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
+  }
+
+  else if (Con_Mode == Cyclic_sync_tor) // Force
+  {
+    cobID = (uint16_t)node + 0x380;
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
+  }
+}
 
 void Enter_RT_CAN(Control_Mode Ctrl_Mode, uint8_t Delay)
 {
@@ -176,7 +221,7 @@ Control_Mode CAN_Check_ControlMode(uint8_t Node){
         return Cyclic_sync_vel;
         break;
       case 0xF7:
-        return voltage;
+        return Voltage;
         break;
       default:
         return error;
@@ -194,23 +239,30 @@ Control_Mode CAN_Check_ControlMode(uint8_t Node){
 
 void CAN_Set_ControlMode(Control_Mode controlmode, uint8_t Node)
 {
-  uint16_t mode;
+  //uint16_t mode;
+  int8_t mode;
   switch (controlmode)
   {
   case Profile_pos:
     mode = 0x01;    break;
   case Profile_vel:
     mode = 0x03;    break;
+  case Homing:
+    mode = 0x06;    break;
   case Cyclic_sync_pos:
     mode = 0x08;    break;
   case Cyclic_sync_vel:
     mode = 0x09;    break;
-  case voltage:
+  case Admittance:
+    mode = 0x09;    break;
+  case Voltage:
     mode = 0xF7;    break;
+  case Cyclic_sync_tor:
+    mode = 0x10;    break;
   default:
     break;
   }
-  CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 1000);
+  CANOpen_writeOD_int8(Node, 0x6060, 0x00, mode, 10);
 }
 
 void CAN_Device_Control(Control_word controlword, uint8_t Node)
@@ -276,10 +328,10 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     cobID = 0x000;
     txData[0] = 0x01;
     txData[1] = 0x00 | Node;
-    CANOpen_sendFrame(cobID,txData,2);
+    CANOpen_sendFrame(cobID,txData,2, 0);
     HAL_Delay(Delay);
     cobID = 0x700 | Node;
-    CANOpen_RemoteRequest(cobID);
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x05 || RxData[0] == 0x85)
     {
@@ -294,10 +346,10 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     cobID = 0x000;
     txData[0] = 0x80;
     txData[1] = 0x00 | Node;
-    CANOpen_sendFrame(cobID, txData, 2);
+    CANOpen_sendFrame(cobID, txData, 2, 0);
     HAL_Delay(Delay);
     cobID = 0x700 | Node;
-    CANOpen_RemoteRequest(cobID);
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x7F || RxData[0] == 0xFF)
     {
@@ -312,10 +364,10 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     cobID = 0x000;
     txData[0] = 0x02;
     txData[1] = 0x00 | Node;
-    CANOpen_sendFrame(cobID, txData, 2);
+    CANOpen_sendFrame(cobID, txData, 2, 0);
     HAL_Delay(Delay);
     cobID = 0x700 | Node;
-    CANOpen_RemoteRequest(cobID);
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x04 || RxData[0] == 0x84)
     {
@@ -331,9 +383,9 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     txData[0] = 0x81;
     txData[1] = 0x00 | Node;
     HAL_Delay(Delay);
-    CANOpen_sendFrame(cobID, txData, 2);
+    CANOpen_sendFrame(cobID, txData, 2, 0);
     cobID = 0x700 | Node;
-    CANOpen_RemoteRequest(cobID);
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x00)
     {
@@ -348,10 +400,10 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     cobID = 0x000;
     txData[0] = 0x82;
     txData[1] = 0x00 | Node;
-    CANOpen_sendFrame(cobID, txData, 2);
+    CANOpen_sendFrame(cobID, txData, 2, 0);
     HAL_Delay(Delay);
     cobID = 0x700 | Node;
-    CANOpen_RemoteRequest(cobID);
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x00)
     {
@@ -363,8 +415,8 @@ NMT_Status CAN_NMT(NMT_OP mode, uint8_t Node, uint8_t Delay)
     }
     break;
   case Ask_NMT:
-    cobID = 0x700|Node;
-    CANOpen_RemoteRequest(cobID);
+    cobID = 0x700 | Node;
+    CANOpen_sendFrame(cobID, NULL, 0, 1);
     HAL_Delay(Delay);
     if (RxData[0] == 0x05 || RxData[0] == 0x85)
     {

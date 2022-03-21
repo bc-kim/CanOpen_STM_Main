@@ -5,7 +5,7 @@
 #include "stm32f4xx_hal.h"
 // Constant values
 
-#define NumOfNode 2
+#define NumOfNode 4
 
 typedef enum SDO_OP{
   Set_OP_mode,
@@ -19,7 +19,10 @@ typedef enum Control_Mode
   Profile_vel,
   Cyclic_sync_pos,
   Cyclic_sync_vel,
-  voltage,
+  Voltage,
+  Homing,
+  Cyclic_sync_tor,
+  Admittance,
 } Control_Mode;
 
 typedef enum StateMachine
@@ -67,9 +70,13 @@ typedef enum Input_Status{
   Button2,
   Button3,
   Init_state,
+  RT_on,
+  Reached,
 }Input_Status;
-
+extern int32_t Pos_ubound_hard[4];
+extern int32_t Pos_lbound_hard[4];
 extern Control_Mode Ctrl_Mode;
+extern Control_Mode Con_Mode[4];
 // Related to the CAN communication in low level
 extern CAN_HandleTypeDef CanHandle;
 extern CAN_RxHeaderTypeDef RxHeader;
@@ -89,8 +96,25 @@ extern uint8_t len;
 extern uint16_t Load_pos[3];
 
 extern uint16_t adcValue[3];
-extern int32_t Pos[3];
-extern int16_t Torque[3];
+extern int32_t Pos[4];
+extern int32_t Vel[4];
+extern int16_t Torque[4];
+extern uint16_t State[4];
+extern uint8_t Force_Reader;
+extern uint16_t StatusWord[4];
+extern uint16_t ControlWord[4];
+
+extern int32_t Desired_PV[4];
+extern int32_t Desired_start_PV[4];
+extern uint16_t Desired_A[4];
+extern uint16_t Desired_start_A[4];
+extern int16_t Desired_F[4];
+extern int16_t Desired_start_F[4];
+extern uint16_t Duration_motor [4];
+extern uint8_t Pos_lim_flag[4];
+extern int32_t Desired_input_PV[4];
+extern int16_t Desired_input_F[4];
+extern uint16_t Desired_input_A[4];
 
 extern float A_Flexor;
 extern float A_Extensor;
@@ -103,17 +127,19 @@ extern uint8_t Motor_Status;
 extern float Target_T[2];
 extern float Tension_error[2];
 extern float Tension_error_before[2];
-extern int32_t Target_Vel[2];
-extern int32_t Vel_ubound[2];
+extern int32_t Target_Vel[4];
+extern int16_t Target_Tor[4];
+extern int32_t Target_Pos[4];
+extern int32_t Pos_check[4];
+
+extern int32_t Vel_ubound[4];
 extern float kp[2];
 extern float kd[2];
 
-extern int32_t Pos_ubound[2];
+extern int32_t Pos_ubound[4];
 extern float T_ubound[2];
 extern float T_lbound[2];
-extern int32_t Pos_lbound[2];
-extern uint16_t Exp_Result;
-extern uint8_t Exp_finished;
+extern int32_t Pos_lbound[4];
 extern uint8_t Force_CO[6];
 
 #ifdef __cplusplus
