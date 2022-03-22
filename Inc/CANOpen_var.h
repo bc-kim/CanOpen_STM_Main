@@ -130,6 +130,25 @@ extern float T_ubound[2];
 extern float T_lbound[2];
 extern int32_t Pos_lbound[4];
 extern uint8_t Force_CO[6];
+
+extern uint8_t Pos_limit_flag[4];
+extern Control_Mode Con_ModePreset_M1[10];
+extern uint16_t DesiredForcePreset_M1[10];
+extern int32_t DesiredValuePreset_M1[10];
+
+extern Control_Mode Con_ModePreset_M2[10];
+extern uint16_t DesiredForcePreset_M2[10];
+extern int32_t DesiredValuePreset_M2[10];
+
+extern Control_Mode Con_ModePreset_M3[10];
+extern uint16_t DesiredForcePreset_M3[10];
+extern int32_t DesiredValuePreset_M3[10];
+
+extern Control_Mode Con_ModePreset_M4[10];
+extern uint16_t DesiredForcePreset_M4[10];
+extern int32_t DesiredValuePreset_M4[10];
+
+
 //extern CO_MOTOR motor_[4];
 
 #ifdef __cplusplus

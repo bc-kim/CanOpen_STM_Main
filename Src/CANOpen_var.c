@@ -78,3 +78,20 @@ extern uint8_t Motor_Status = 0;
 extern uint16_t Exp_Result = 500;
 extern uint8_t Exp_finished = 1;
 extern uint8_t Direction = 1;
+
+extern uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
+extern Control_Mode Con_ModePresetM1[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern uint16_t DesiredForcePresetM1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+extern Control_Mode Con_ModePresetM2[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern uint16_t DesiredForcePresetM2[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM2[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+extern Control_Mode Con_ModePresetM3[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern uint16_t DesiredForcePresetM3[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM3[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+extern Control_Mode Con_ModePresetM4[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern uint16_t DesiredForcePresetM4[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM4[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};

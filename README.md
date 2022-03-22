@@ -2,6 +2,12 @@
 
 ## **Update Log**
 ### **2022.03.22**
+
+**[Con_ModePresetM# 추가] 커밋**
+
+- 각 모터 드라이버에 다른 ConMode, DesiredValue 배열이 입력되도록 변경.
+- j=1커밋에서 모터드라이버 4번에만 원하는 값이 들어가지 않음을 확인함.
+
 **[j=1일때 if문 예외 추가] 커밋**
 
 - j=1일때 CON_Mode와 CON_Mode_Prev가 같아서 CON_Mode가 제대로 설정 안되던 문제 해결

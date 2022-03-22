@@ -92,11 +92,6 @@ CO_MOTOR motor_[4];
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
-Control_Mode Con_ModePreset[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
-uint16_t DesiredForcePreset[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int32_t DesiredValuePreset[10] = {0,0,0,0,0,0,0,0,0,0};
-
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) // HAL_Can interrupt
 {
   uint8_t node;
@@ -181,7 +176,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
+int32_t DesiredValue_Global[4] = {0,0,0,0};
 uint8_t UserButton = 0;
+uint8_t j = 1;
+// static uint8_t j = 1;를 밖에 빼서 확인용.
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
   uint8_t i;
@@ -206,7 +204,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
     if (Input == RT_on)
     {
       CANOpen_sendFrame(0x51, Force_CO, 6, 0); // SendForceData
-      static uint8_t j = 1;
+      
       for (i = 1; i < 5; i++)
       {
         // 1.1 UpdateDesiredCM/Values in automotive case
@@ -230,6 +228,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             {
               DesiredValue_prev = DesiredValue;
               DesiredValue = motor_[i - 1].DesiredValue[j - 1];
+              DesiredValue_Global[i - 1] = motor_[i - 1].DesiredValue[j - 1];
             }
             motor_[i - 1].PDO_Status = PDO_DV_Updated;
           }
@@ -287,9 +286,6 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
         }
 
         // 4. Check the convergence
-        // while(motor_[i-1].PDO_Status == PDO_CV_Waiting)
-        //{
-        //}
 
         if (motor_[i - 1].PDO_Status == PDO_CV_Received || motor_[i - 1].PDO_Status == PDO_CV_NotConverged)
         {
@@ -412,10 +408,22 @@ int main(void)
     CANOpen_mappingPDO_init(&motor_[i].RPDO[3]);
     CANOpen_mappingPDO_int16(&motor_[i].RPDO[3], &Target_Tor[i]);
 
-    memcpy(&motor_[i].Con_Mode[0], &Con_ModePreset[0], 40);
-    memcpy(&motor_[i].DesiredForce[0], &DesiredForcePreset[0], 20);
-    memcpy(&motor_[i].DesiredValue[0], &DesiredValuePreset[0], 40);
   }
+  memcpy(&motor_[0].Con_Mode[0], &Con_ModePresetM1[0], 40);
+  memcpy(&motor_[0].DesiredForce[0], &DesiredForcePresetM1[0], 20);
+  memcpy(&motor_[0].DesiredValue[0], &DesiredValuePresetM1[0], 40);
+
+  memcpy(&motor_[1].Con_Mode[0], &Con_ModePresetM2[0], 40);
+  memcpy(&motor_[1].DesiredForce[0], &DesiredForcePresetM2[0], 20);
+  memcpy(&motor_[1].DesiredValue[0], &DesiredValuePresetM2[0], 40);
+
+  memcpy(&motor_[2].Con_Mode[0], &Con_ModePresetM3[0], 40);
+  memcpy(&motor_[2].DesiredForce[0], &DesiredForcePresetM3[0], 20);
+  memcpy(&motor_[2].DesiredValue[0], &DesiredValuePresetM3[0], 40);
+
+  memcpy(&motor_[3].Con_Mode[0], &Con_ModePresetM4[0], 40);
+  memcpy(&motor_[3].DesiredForce[0], &DesiredForcePresetM4[0], 20);
+  memcpy(&motor_[3].DesiredValue[0], &DesiredValuePresetM4[0], 40);
 
   Ctrl_Mode = Profile_vel;
 
