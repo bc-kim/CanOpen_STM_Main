@@ -76,6 +76,9 @@ extern uint16_t Exp_Result = 500;
 extern uint8_t Exp_finished = 1;
 extern uint8_t Direction = 1;
 
+extern Control_Mode Con_Mode[4]={Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern Control_Mode Con_Mode_Prev[4]={Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+
 extern uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
 extern Control_Mode Con_ModePreset_M1[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};

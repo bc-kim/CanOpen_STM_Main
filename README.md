@@ -3,11 +3,12 @@
 ## **Update Log**
 ### **2022.03.22**
 
-**[CAN_SendDesiredValue함수수정2] 커밋**
+**[CAN_SendDesiredValue함수수정3] 커밋**
 
 - CAN_SendDesiredValue함수 내에서 CAN_SendPDO가 Node가 Node-1이 되어있어서 Node4에 값이 포함안되던 문제 해결
 - 아마 밑에 있는 모터드라이버 4번에 원하는 값이 안들어가는 문제가 해결되지 않을까?
 - 변수 잘못 적은거 수정해서 뒤에 2 붙임 (DesiredValuePreset_M4)
+- 변수 잘못 적은거 수정해서 뒤에 3 붙임, 일단 4번에 원하는 값이 들어가지만 j가 증가하지않음을 확인.
 
 **[Con_ModePresetM# 추가] 커밋**
 

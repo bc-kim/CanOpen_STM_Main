@@ -23,9 +23,9 @@
 
 if ($debugfile -eq "")
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "D:\git\CanOpen_STM_Main\EWARM\settings\STM_CAN.STM_CAN.general.xcl" --backend -f "D:\git\CanOpen_STM_Main\EWARM\settings\STM_CAN.STM_CAN.driver.xcl" 
+& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "D:\STM_CA_Main\EWARM\settings\STM_CAN.STM_CAN.general.xcl" --backend -f "D:\STM_CA_Main\EWARM\settings\STM_CAN.STM_CAN.driver.xcl" 
 }
 else
 {
-& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "D:\git\CanOpen_STM_Main\EWARM\settings\STM_CAN.STM_CAN.general.xcl" --debug_file=$debugfile --backend -f "D:\git\CanOpen_STM_Main\EWARM\settings\STM_CAN.STM_CAN.driver.xcl" 
+& "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "D:\STM_CA_Main\EWARM\settings\STM_CAN.STM_CAN.general.xcl" --debug_file=$debugfile --backend -f "D:\STM_CA_Main\EWARM\settings\STM_CAN.STM_CAN.driver.xcl" 
 }

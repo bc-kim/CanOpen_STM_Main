@@ -14,13 +14,13 @@
     <StLinkDriver>
         <stlinkserialNo>066BFF544851717867234939</stlinkserialNo>
         <stlinkfoundProbes />
-        <stlinkResetStyle>0</stlinkResetStyle>
-        <stlinkResetStrategy>2</stlinkResetStrategy>
         <CStepIntDis>_ 0</CStepIntDis>
         <LeaveTargetRunning>_ 0</LeaveTargetRunning>
+        <stlinkResetStyle>0</stlinkResetStyle>
+        <stlinkResetStrategy>2</stlinkResetStrategy>
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>783884595</Checksum>
+        <Checksum>59143550</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -107,6 +107,13 @@
         <ShowTimeSum>1</ShowTimeSum>
         <SumSortOrder>0</SumSortOrder>
     </EventLog>
+    <DisassembleMode>
+        <mode>0</mode>
+    </DisassembleMode>
+    <Breakpoints2>
+        <Bp0>_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\Src\main.c}.305.11" 0 0 1 "" 0 "" 0</Bp0>
+        <Count>1</Count>
+    </Breakpoints2>
     <TermIOLog>
         <LoggingEnabled>_ 0</LoggingEnabled>
         <LogFile>_ ""</LogFile>
@@ -116,6 +123,12 @@
         <LogFile>_ ""</LogFile>
         <Category>_ 0</Category>
     </LogFile>
+    <Aliases>
+        <A0>_ "D:\SourceTree\STM\STM_CAN_Thumb\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_adc_ex.c" "D:\STM_CA_Main\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_adc_ex.c"</A0>
+        <A1>_ "D:\SourceTree\STM\STM_CAN_Thumb\Src\stm32f4xx_it.c" "D:\STM_CA\Src\stm32f4xx_it.c"</A1>
+        <Count>2</Count>
+        <SuppressDialog>1</SuppressDialog>
+    </Aliases>
     <DriverProfiling>
         <Enabled>0</Enabled>
         <Mode>3</Mode>
@@ -129,15 +142,4 @@
     <CallStackStripe>
         <ShowTiming>1</ShowTiming>
     </CallStackStripe>
-    <DisassembleMode>
-        <mode>0</mode>
-    </DisassembleMode>
-    <Breakpoints2>
-        <Count>0</Count>
-    </Breakpoints2>
-    <Aliases>
-        <A0>_ "D:\SourceTree\STM\STM_CAN_Thumb\Src\stm32f4xx_it.c" "D:\STM_CA\Src\stm32f4xx_it.c"</A0>
-        <Count>1</Count>
-        <SuppressDialog>1</SuppressDialog>
-    </Aliases>
 </settings>
