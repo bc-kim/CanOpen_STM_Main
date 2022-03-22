@@ -58,7 +58,7 @@ CO_Status Init_CAN(uint8_t Delay)
   }
 }
 
-PDO_Status CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct)
+PDO_Status CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct, uint16_t *ConvFlag)
 {
   int32_t CurrentValue;
 
@@ -69,6 +69,7 @@ PDO_Status CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t
     if ((CurrentValue - Desired_value) * (CurrentValue - Desired_value) < 10)
     {
       return PDO_CV_Converged;
+      *ConvFlag = 1;
     }
     else
     {

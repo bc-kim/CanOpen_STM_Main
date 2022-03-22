@@ -18,7 +18,7 @@ extern void CAN_Ask_CurrentValue(Control_Mode controlmode, uint8_t node);
 extern void CAN_Send_ControlInput(Control_Mode controlmode, int32_t PV, uint8_t node, int32_t Position_Lim);
 extern void CAN_Send_ControlInput_int16(Control_Mode controlmode, int16_t PV, uint8_t node, int32_t Position_Lim);
 extern int32_t Admittance_Desired(uint16_t ADC_input);
-extern enum PDO_Status CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct);
+extern enum PDO_Status CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct, uint16_t *ConvFlag);
 extern void CAN_Send_DesiredValue(Control_Mode Con_Mode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct);
 // uint8_t CAN_NMT_CTR();
 // 0x22 PDO Objects

@@ -186,6 +186,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
   uint8_t Flag_RT = 0;
   static int32_t DesiredValue[4] = {0,0,0,0};
   static int32_t DesiredValue_prev[4] = {0,0,0,0};
+  static uint8_t ConvFlag[4] = {0, 0, 0, 0};
 
   uint8_t Automotive = 1; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
 
@@ -294,15 +295,20 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           }
           else
           {
-            motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1]);
+            motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1], &ConvFlag[i-1]);
           }
         }
         CAN_Send_DesiredValue(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], &motor_[i - 1]);
         motor_[i - 1].PDO_Status = PDO_DV_Sent;
         // 5. SendDesiredValue
-        if (motor_[0].PDO_Status == PDO_CV_Converged && motor_[1].PDO_Status == PDO_CV_Converged && motor_[2].PDO_Status == PDO_CV_Converged && motor_[3].PDO_Status == PDO_CV_Converged)
+        if (ConvFlag[0] + ConvFlag[1] + ConvFlag[2] + ConvFlag[3] == 4)
         {
           HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET);
+          ConvFlag[0] = 0;
+          ConvFlag[1] = 0;
+          ConvFlag[2] = 0;
+          ConvFlag[3] = 0;
+
           j++;
         }
       }
