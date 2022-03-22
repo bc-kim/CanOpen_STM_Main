@@ -3,11 +3,13 @@
 ## **Update Log**
 ### **2022.03.22**
 
-**[ConvFlag추가] 커밋**
+**[ConvFlag추가2] 커밋**
 
 - 모터드라이버 4번에 원하는 값 들어가는건 해결 (아래 커밋을 통해)
 - j가 안들어가는 이유는 PDOStatus가 너무 빨리 바뀌는거라 ConvFlag 변수 이용해서 해결해보려 함.
 - PDO convergence를 PDOStatus로 output을 주지않고 ConvFlag로 output을 두어 해결해봄.
+- ConvFlag로 해결가능함을 확인했음. (ConfFlag추가2)
+- j가 주어진 값보다 크면 문제가 될 수 있어서 코드로 해결함. (ConfFlag추가2)
 
 **[CAN_SendDesiredValue함수수정3] 커밋**
 

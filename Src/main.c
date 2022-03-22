@@ -316,8 +316,10 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           ConvFlag[1] = 0;
           ConvFlag[2] = 0;
           ConvFlag[3] = 0;
-
-          j++;
+          if(j<11)
+          {
+            j++;
+          }
         }
       }
       if (Flag_RT)
