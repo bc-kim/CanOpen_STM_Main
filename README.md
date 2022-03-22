@@ -3,6 +3,12 @@
 ## **Update Log**
 ### **2022.03.22**
 
+**[1차 완성] 커밋**
+
+- 잘 구동되는 상태 중간 저장
+- 다만 이상하게 desired들 크기를 10->20으로 하니까 conv_flag가 1,1,1,0으로 마지막값이 수렴 안했다고 떠서 수정이 필요해 보임.
+
+
 **[CAN_Check_Convergence 함수 변경] 커밋**
 
 - Admittance일때는 Motor Data가 아닌 Loadcell data의 error값으로 수렴 여부를 반환하도록 변경함.

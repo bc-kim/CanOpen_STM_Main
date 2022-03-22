@@ -78,21 +78,20 @@ extern uint8_t Exp_finished = 1;
 extern uint8_t Direction = 1;
 
 extern Control_Mode Con_Mode[4]={Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
+extern Control_Mode Con_Mode_input[4]={Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern Control_Mode Con_Mode_Prev[4]={Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 
 extern uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
 extern Control_Mode Con_ModePreset_M1[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePreset_M1[10] = {500, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 extern Control_Mode Con_ModePreset_M2[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M2[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePreset_M2[10] = {505, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 extern Control_Mode Con_ModePreset_M3[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M3[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePreset_M3[10] = {510, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 extern Control_Mode Con_ModePreset_M4[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M4[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePreset_M4[10] = {515, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+extern int32_t DesiredValuePreset_M1[10] = {50000, 50000, 50000, 50000, 50000, 50000, 50000, 50000, 50000, 50000};
+extern int32_t DesiredValuePreset_M2[10] = {0, 8000, 0, 8000, 0, 8000, 0, 8000, 0, 8000};
+extern int32_t DesiredValuePreset_M3[10] = {0, 0, 5000, 0, 5000, 0, 5000, 0, 5000, 0};
+extern int32_t DesiredValuePreset_M4[10] = {12000, 12000, 12000, 12000, 12000, 12000, 12000, 12000, 12000, 12000};
