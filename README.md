@@ -3,6 +3,11 @@
 ## **Update Log**
 ### **2022.03.22**
 
+**[ConvFlag추가] 커밋**
+
+- 모터드라이버 4번에 원하는 값 들어가는건 해결 (아래 커밋을 통해)
+- j가 안들어가는 이유는 PDOStatus가 너무 빨리 바뀌는거라 ConvFlag 변수 이용해서 해결해보려 함.
+
 **[CAN_SendDesiredValue함수수정3] 커밋**
 
 - CAN_SendDesiredValue함수 내에서 CAN_SendPDO가 Node가 Node-1이 되어있어서 Node4에 값이 포함안되던 문제 해결
