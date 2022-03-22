@@ -176,7 +176,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
-int32_t DesiredValue_Global[4] = {0,0,0,0};
 uint8_t UserButton = 0;
 uint8_t j = 1;
 // static uint8_t j = 1;를 밖에 빼서 확인용.
@@ -185,8 +184,8 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
   uint8_t i;
   uint8_t adc_read = 1;
   uint8_t Flag_RT = 0;
-  static int32_t DesiredValue = 0;
-  static int32_t DesiredValue_prev = 0;
+  static int32_t DesiredValue[4] = {0,0,0,0};
+  static int32_t DesiredValue_prev[4] = {0,0,0,0};
 
   uint8_t Automotive = 1; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
 
@@ -220,15 +219,15 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             {
               Desired_A[i - 1] = motor_[i - 1].DesiredForce[j - 1];
               Tension_error[i - 1] = (float)(Desired_A[i - 1] - adcValue[adc_read]);
-              DesiredValue_prev = DesiredValue;
-              DesiredValue = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
+              DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+              DesiredValue[i - 1] = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
               memcpy(&Tension_error_before[i - 1], &Tension_error[i - 1], 4);
             }
             else
             {
-              DesiredValue_prev = DesiredValue;
-              DesiredValue = motor_[i - 1].DesiredValue[j - 1];
-              DesiredValue_Global[i - 1] = motor_[i - 1].DesiredValue[j - 1];
+              DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+              DesiredValue[i - 1] = motor_[i - 1].DesiredValue[j - 1];
+//              DesiredValue_Global[i - 1] = motor_[i - 1].DesiredValue[j - 1];
             }
             motor_[i - 1].PDO_Status = PDO_DV_Updated;
           }
@@ -251,15 +250,15 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             {
               Desired_A[i - 1] = Desired_input_A[i - 1];
               Tension_error[i - 1] = (float)(Desired_input_A[i - 1] - adcValue[adc_read]);
-              DesiredValue_prev = DesiredValue;
-              DesiredValue = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
+              DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+              DesiredValue[i - 1] = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
               memcpy(&Tension_error_before[i - 1], &Tension_error[i - 1], 4);
             }
             else
             {
               Desired_PV[i - 1] = Desired_input_PV[i - 1];
-              DesiredValue_prev = DesiredValue;
-              DesiredValue = Desired_PV[i - 1];
+              DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+              DesiredValue[i - 1] = Desired_PV[i - 1];
             }
             motor_[i - 1].PDO_Status = PDO_DV_Updated;
           }
@@ -289,13 +288,16 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 
         if (motor_[i - 1].PDO_Status == PDO_CV_Received || motor_[i - 1].PDO_Status == PDO_CV_NotConverged)
         {
-          motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev, &motor_[i - 1]);
           if (j == 1)
           {
             motor_[i - 1].PDO_Status = PDO_CV_Converged;
           }
+          else
+          {
+            motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1]);
+          }
         }
-        CAN_Send_DesiredValue(Con_Mode[i - 1], Node[i - 1], DesiredValue, &motor_[i - 1]);
+        CAN_Send_DesiredValue(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], &motor_[i - 1]);
         motor_[i - 1].PDO_Status = PDO_DV_Sent;
         // 5. SendDesiredValue
         if (motor_[0].PDO_Status == PDO_CV_Converged && motor_[1].PDO_Status == PDO_CV_Converged && motor_[2].PDO_Status == PDO_CV_Converged && motor_[3].PDO_Status == PDO_CV_Converged)

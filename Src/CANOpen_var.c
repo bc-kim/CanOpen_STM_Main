@@ -6,9 +6,6 @@ uint8_t RxData[8];
 CAN_RxHeaderTypeDef RxHeader;
 
 extern Control_Mode Ctrl_Mode = Profile_pos;
-extern Control_Mode Con_Mode[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
-extern Control_Mode Con_Mode_Prev[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
-extern Control_Mode Con_Mode_input[4] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 //extern CO_MOTOR motor_[4];
 extern uint8_t Input = 0;
 extern uint8_t RealTime = 0;
@@ -82,16 +79,16 @@ extern uint8_t Direction = 1;
 extern uint8_t Pos_limit_flag[4] = {0, 0, 0, 0};
 extern Control_Mode Con_ModePresetM1[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePresetM1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePresetM1[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM1[10] = {500, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 extern Control_Mode Con_ModePresetM2[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePresetM2[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePresetM2[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM2[10] = {505, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 extern Control_Mode Con_ModePresetM3[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePresetM3[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePresetM3[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM3[10] = {510, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 extern Control_Mode Con_ModePresetM4[10] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePresetM4[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-extern int32_t DesiredValuePresetM4[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int32_t DesiredValuePresetM4[10] = {515, 0, 0, 0, 0, 0, 0, 0, 0, 0};

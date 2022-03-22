@@ -120,12 +120,12 @@ void CAN_Send_DesiredValue(Control_Mode controlmode, uint8_t Node, int32_t Desir
     {
       Target_Pos[Node - 1] = Pos_lbound[Node - 1];
     }
-    CANOpen_sendPDO(Node - 1, 2, &MotorStruct->RPDO[1]);
+    CANOpen_sendPDO(Node, 2, &MotorStruct->RPDO[1]);
   }
   else if (controlmode == Cyclic_sync_vel) // Velocity
   {
     Target_Vel[Node - 1] = Desired_value;
-    if (Target_Vel[Node - 1] > 0 && Pos_check[Node - 1] > Pos_ubound[Node - 1])
+    if (Target_Vel[Node] > 0 && Pos_check[Node - 1] > Pos_ubound[Node - 1])
     {
       Target_Vel[Node - 1] = 0;
     }
@@ -133,7 +133,7 @@ void CAN_Send_DesiredValue(Control_Mode controlmode, uint8_t Node, int32_t Desir
     {
       Target_Vel[Node - 1] = 0;
     }
-    CANOpen_sendPDO(Node - 1, 3, &MotorStruct->RPDO[2]);
+    CANOpen_sendPDO(Node, 3, &MotorStruct->RPDO[2]);
   }
   else if (controlmode == Admittance) // Admittance
   {
@@ -146,7 +146,7 @@ void CAN_Send_DesiredValue(Control_Mode controlmode, uint8_t Node, int32_t Desir
     {
       Target_Vel[Node - 1] = 0;
     }
-    CANOpen_sendPDO(Node - 1, 3, &MotorStruct->RPDO[2]);
+    CANOpen_sendPDO(Node, 3, &MotorStruct->RPDO[2]);
   }
   }
 

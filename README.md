@@ -3,6 +3,12 @@
 ## **Update Log**
 ### **2022.03.22**
 
+**[CAN_SendDesiredValue함수수정] 커밋**
+
+- CAN_SendDesiredValue함수 내에서 CAN_SendPDO가 Node가 Node-1이 되어있어서 Node4에 값이 포함안되던 문제 해결
+- 아마 밑에 있는 모터드라이버 4번에 원하는 값이 안들어가는 문제가 해결되지 않을까?
+
+
 **[Con_ModePresetM# 추가] 커밋**
 
 - 각 모터 드라이버에 다른 ConMode, DesiredValue 배열이 입력되도록 변경.
