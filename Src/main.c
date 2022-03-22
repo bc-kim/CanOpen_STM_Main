@@ -190,7 +190,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
   static int32_t DesiredValue = 0;
   static int32_t DesiredValue_prev = 0;
 
-  uint8_t Automotive = 0; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
+  uint8_t Automotive = 1; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
 
   if (hadc == &hadc1)
   {
@@ -269,10 +269,18 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
         if (motor_[i - 1].PDO_Status == PDO_DV_Updated)
         {
           // 2. CANSetControlMode
-          if (Con_Mode[i - 1] != Con_Mode_Prev[i - 1])
+          if (j == 1)
           {
-            CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]); //
+            CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]);
           }
+          else 
+          {
+            if (Con_Mode[i - 1] != Con_Mode_Prev[i - 1])
+            {
+              CAN_Set_ControlMode(Con_Mode[i - 1], Node[i - 1]); //
+            }
+          }
+
           // 3. AskCurrentValue
           CAN_Ask_CurrentValue(Con_Mode[i - 1], Node[i - 1]); // Ask the current value until the motor reaches to the target value.
           motor_[i - 1].PDO_Status = PDO_CV_Waiting;
@@ -396,7 +404,6 @@ int main(void)
     CANOpen_mappingPDO_uint16(&motor_[i].RPDO[0], &ControlWord[i]);
 
     CANOpen_mappingPDO_init(&motor_[i].RPDO[1]);
-    // CANOpen_mappingPDO_uint16(&motor_[i].RPDO[1], &ControlWord[i]);
     CANOpen_mappingPDO_int32(&motor_[i].RPDO[1], &Target_Pos[i]);
 
     CANOpen_mappingPDO_init(&motor_[i].RPDO[2]);
