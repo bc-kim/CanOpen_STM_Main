@@ -7,6 +7,7 @@
 
 - 모터드라이버 4번에 원하는 값 들어가는건 해결 (아래 커밋을 통해)
 - j가 안들어가는 이유는 PDOStatus가 너무 빨리 바뀌는거라 ConvFlag 변수 이용해서 해결해보려 함.
+- PDO convergence를 PDOStatus로 output을 주지않고 ConvFlag로 output을 두어 해결해봄.
 
 **[CAN_SendDesiredValue함수수정3] 커밋**
 

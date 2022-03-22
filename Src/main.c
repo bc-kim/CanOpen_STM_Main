@@ -291,11 +291,19 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
         {
           if (j == 1)
           {
-            motor_[i - 1].PDO_Status = PDO_CV_Converged;
+             if(CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], &motor_[i - 1])==1)
+             {
+               motor_[i - 1].PDO_Status = PDO_CV_Converged;
+               ConvFlag[i-1] = 1;
+             }
           }
           else
           {
-            motor_[i - 1].PDO_Status = CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1], &ConvFlag[i-1]);
+            if (CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1]) == 1)
+            {
+              motor_[i - 1].PDO_Status = PDO_CV_Converged;
+              ConvFlag[i - 1] = 1;
+            }
           }
         }
         CAN_Send_DesiredValue(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], &motor_[i - 1]);
