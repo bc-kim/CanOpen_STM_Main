@@ -411,21 +411,21 @@ int main(void)
     CANOpen_mappingPDO_int16(&motor_[i].RPDO[3], &Target_Tor[i]);
 
   }
-  memcpy(&motor_[0].Con_Mode[0], &Con_ModePresetM1[0], 40);
-  memcpy(&motor_[0].DesiredForce[0], &DesiredForcePresetM1[0], 20);
-  memcpy(&motor_[0].DesiredValue[0], &DesiredValuePresetM1[0], 40);
+  memcpy(&motor_[0].Con_Mode[0], &Con_ModePreset_M1[0], 40);
+  memcpy(&motor_[0].DesiredForce[0], &DesiredForcePreset_M1[0], 20);
+  memcpy(&motor_[0].DesiredValue[0], &DesiredValuePreset_M1[0], 40);
 
-  memcpy(&motor_[1].Con_Mode[0], &Con_ModePresetM2[0], 40);
-  memcpy(&motor_[1].DesiredForce[0], &DesiredForcePresetM2[0], 20);
-  memcpy(&motor_[1].DesiredValue[0], &DesiredValuePresetM2[0], 40);
+  memcpy(&motor_[1].Con_Mode[0], &Con_ModePreset_M2[0], 40);
+  memcpy(&motor_[1].DesiredForce[0], &DesiredForcePreset_M2[0], 20);
+  memcpy(&motor_[1].DesiredValue[0], &DesiredValuePreset_M2[0], 40);
 
-  memcpy(&motor_[2].Con_Mode[0], &Con_ModePresetM3[0], 40);
-  memcpy(&motor_[2].DesiredForce[0], &DesiredForcePresetM3[0], 20);
-  memcpy(&motor_[2].DesiredValue[0], &DesiredValuePresetM3[0], 40);
+  memcpy(&motor_[2].Con_Mode[0], &Con_ModePreset_M3[0], 40);
+  memcpy(&motor_[2].DesiredForce[0], &DesiredForcePreset_M3[0], 20);
+  memcpy(&motor_[2].DesiredValue[0], &DesiredValuePreset_M3[0], 40);
 
-  memcpy(&motor_[3].Con_Mode[0], &Con_ModePresetM4[0], 40);
-  memcpy(&motor_[3].DesiredForce[0], &DesiredForcePresetM4[0], 20);
-  memcpy(&motor_[3].DesiredValue[0], &DesiredValuePresetM4[0], 40);
+  memcpy(&motor_[3].Con_Mode[0], &Con_ModePreset_M4[0], 40);
+  memcpy(&motor_[3].DesiredForce[0], &DesiredForcePreset_M4[0], 20);
+  memcpy(&motor_[3].DesiredValue[0], &DesiredValuePreset_M4[0], 40);
 
   Ctrl_Mode = Profile_vel;
 
