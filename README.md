@@ -3,6 +3,10 @@
 ## **Update Log**
 ### **2022.03.22**
 
+**[CAN_Check_Convergence 함수 변경] 커밋**
+
+- Admittance일때는 Motor Data가 아닌 Loadcell data의 error값으로 수렴 여부를 반환하도록 변경함.
+
 **[ConvFlag추가2] 커밋**
 
 - 모터드라이버 4번에 원하는 값 들어가는건 해결 (아래 커밋을 통해)

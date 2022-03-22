@@ -58,7 +58,7 @@ CO_Status Init_CAN(uint8_t Delay)
   }
 }
 
-int8_t CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, CO_MOTOR *MotorStruct)
+int8_t CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Desired_value, float TensionError, CO_MOTOR *MotorStruct)
 {
   int32_t CurrentValue;
 
@@ -83,29 +83,31 @@ int8_t CAN_Check_Convergence(Control_Mode controlmode, uint8_t Node, int32_t Des
     memcpy(&CurrentValue, &Vel[Node - 1], 4);
     if ((CurrentValue - Desired_value)*(CurrentValue - Desired_value) < 10)
     {
-      return PDO_CV_Converged;
+      return 1;
     }
     else
     {
-      return PDO_CV_NotConverged;
+      return 0;
     }
   }
   else if (controlmode == Admittance) // Admittance
   {
-    CANOpen_readPDO(Node, 2, &MotorStruct->TPDO[1], 2);
-    memcpy(&CurrentValue, &Vel[Node - 1], 4);
-    if ((CurrentValue - Desired_value) * (CurrentValue - Desired_value) < 10)
+ //   CANOpen_readPDO(Node, 2, &MotorStruct->TPDO[1], 2);
+//    memcpy(&CurrentValue, &Vel[Node - 1], 4);
+
+    if (TensionError *TensionError < 20)
     {
-      return PDO_CV_Converged;
+      return 1;
     }
     else
     {
-      return PDO_CV_NotConverged;
+      return 0;
     }
   }
 
   else{
-    return PDO_error;
+//    return PDO_error;
+    return 2;
   }
 }
 

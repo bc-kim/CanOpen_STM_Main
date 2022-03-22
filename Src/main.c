@@ -218,6 +218,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             // 1.1.2 SetDesiredValue
             if (Con_Mode[i - 1] == Admittance)
             {
+              Desired_A_Prev[i-1] = Desired_A[i-1];
               Desired_A[i - 1] = motor_[i - 1].DesiredForce[j - 1];
               Tension_error[i - 1] = (float)(Desired_A[i - 1] - adcValue[adc_read]);
               DesiredValue_prev[i - 1] = DesiredValue[i - 1];
@@ -249,8 +250,9 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             // 1.2.2 SetDesiredValue
             if (Con_Mode[i - 1] == Admittance)
             {
+              Desired_A_Prev[i - 1] = Desired_A[i - 1];
               Desired_A[i - 1] = Desired_input_A[i - 1];
-              Tension_error[i - 1] = (float)(Desired_input_A[i - 1] - adcValue[adc_read]);
+              Tension_error[i - 1] = (float)(Desired_A[i - 1] - adcValue[adc_read]);
               DesiredValue_prev[i - 1] = DesiredValue[i - 1];
               DesiredValue[i - 1] = (int32_t)(kp[i - 1] * Tension_error[i - 1] + kd[i - 1] * (Tension_error[i - 1] - Tension_error_before[i - 1]));
               memcpy(&Tension_error_before[i - 1], &Tension_error[i - 1], 4);
@@ -291,18 +293,27 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
         {
           if (j == 1)
           {
-             if(CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], &motor_[i - 1])==1)
-             {
-               motor_[i - 1].PDO_Status = PDO_CV_Converged;
-               ConvFlag[i-1] = 1;
+            if (CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue[i - 1], Tension_error[i-1], & motor_[i - 1]) == 1)
+            {
+              motor_[i - 1].PDO_Status = PDO_CV_Converged;
+              ConvFlag[i - 1] = 1;
+             }
+             else{
+               motor_[i - 1].PDO_Status = PDO_CV_NotConverged;
+               ConvFlag[i-1] = 0;
              }
           }
           else
           {
-            if (CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], &motor_[i - 1]) == 1)
+            if (CAN_Check_Convergence(Con_Mode[i - 1], Node[i - 1], DesiredValue_prev[i - 1], Tension_error[i - 1], & motor_[i - 1]) == 1)
             {
               motor_[i - 1].PDO_Status = PDO_CV_Converged;
               ConvFlag[i - 1] = 1;
+            }
+            else
+            {
+              motor_[i - 1].PDO_Status = PDO_CV_NotConverged;
+              ConvFlag[i - 1] = 0;
             }
           }
         }
@@ -320,6 +331,10 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           {
             j++;
           }
+        }
+        else if (ConvFlag[0] + ConvFlag[1] + ConvFlag[2] + ConvFlag[3] >4)
+        {
+          motor_[i-1].PDO_Status = PDO_error;
         }
       }
       if (Flag_RT)

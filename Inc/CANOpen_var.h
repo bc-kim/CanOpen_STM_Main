@@ -96,6 +96,7 @@ extern uint16_t ControlWord[4];
 extern int32_t Desired_PV[4];
 extern int32_t Desired_start_PV[4];
 extern uint16_t Desired_A[4];
+extern uint16_t Desired_A_Prev[4];
 extern uint16_t Desired_start_A[4];
 extern int16_t Desired_F[4];
 extern int16_t Desired_start_F[4];
