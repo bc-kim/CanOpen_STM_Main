@@ -61,9 +61,9 @@ typedef struct CO_MOTOR
   CO_PDOStruct TPDO[4];
   CO_PDOStruct RPDO[4];
   PDO_Status PDO_Status;
-  Control_Mode Con_Mode[10];
-  int32_t DesiredValue[10];
-  uint16_t DesiredForce[10];
+  Control_Mode Con_Mode[20];
+  int32_t DesiredValue[20];
+  uint16_t DesiredForce[20];
 } CO_MOTOR;
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))

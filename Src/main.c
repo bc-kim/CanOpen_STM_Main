@@ -327,7 +327,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           ConvFlag[1] = 0;
           ConvFlag[2] = 0;
           ConvFlag[3] = 0;
-          if(j<11)
+          if(j<20)
           {
             j++;
           }
@@ -442,21 +442,21 @@ int main(void)
     CANOpen_mappingPDO_int16(&motor_[i].RPDO[3], &Target_Tor[i]);
 
   }
-  memcpy(&motor_[0].Con_Mode[0], &Con_ModePreset_M1[0], 40);
-  memcpy(&motor_[0].DesiredForce[0], &DesiredForcePreset_M1[0], 20);
-  memcpy(&motor_[0].DesiredValue[0], &DesiredValuePreset_M1[0], 40);
+  memcpy(&motor_[0].Con_Mode[0], &Con_ModePreset_M1[0], 80);
+  memcpy(&motor_[0].DesiredForce[0], &DesiredForcePreset_M1[0], 40);
+  memcpy(&motor_[0].DesiredValue[0], &DesiredValuePreset_M1[0], 80);
 
-  memcpy(&motor_[1].Con_Mode[0], &Con_ModePreset_M2[0], 40);
-  memcpy(&motor_[1].DesiredForce[0], &DesiredForcePreset_M2[0], 20);
-  memcpy(&motor_[1].DesiredValue[0], &DesiredValuePreset_M2[0], 40);
+  memcpy(&motor_[1].Con_Mode[0], &Con_ModePreset_M2[0], 80);
+  memcpy(&motor_[1].DesiredForce[0], &DesiredForcePreset_M2[0], 40);
+  memcpy(&motor_[1].DesiredValue[0], &DesiredValuePreset_M2[0], 80);
 
-  memcpy(&motor_[2].Con_Mode[0], &Con_ModePreset_M3[0], 40);
-  memcpy(&motor_[2].DesiredForce[0], &DesiredForcePreset_M3[0], 20);
-  memcpy(&motor_[2].DesiredValue[0], &DesiredValuePreset_M3[0], 40);
+  memcpy(&motor_[2].Con_Mode[0], &Con_ModePreset_M3[0], 80);
+  memcpy(&motor_[2].DesiredForce[0], &DesiredForcePreset_M3[0], 40);
+  memcpy(&motor_[2].DesiredValue[0], &DesiredValuePreset_M3[0], 80);
 
-  memcpy(&motor_[3].Con_Mode[0], &Con_ModePreset_M4[0], 40);
-  memcpy(&motor_[3].DesiredForce[0], &DesiredForcePreset_M4[0], 20);
-  memcpy(&motor_[3].DesiredValue[0], &DesiredValuePreset_M4[0], 40);
+  memcpy(&motor_[3].Con_Mode[0], &Con_ModePreset_M4[0], 80);
+  memcpy(&motor_[3].DesiredForce[0], &DesiredForcePreset_M4[0], 40);
+  memcpy(&motor_[3].DesiredValue[0], &DesiredValuePreset_M4[0], 80);
 
   Ctrl_Mode = Profile_vel;
 
