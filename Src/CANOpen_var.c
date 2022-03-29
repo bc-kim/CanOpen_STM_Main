@@ -91,7 +91,7 @@ extern uint16_t DesiredForcePreset_M3[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 
 extern Control_Mode Con_ModePreset_M4[20] = {Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos,Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos, Cyclic_sync_pos};
 extern uint16_t DesiredForcePreset_M4[20] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-extern int32_t DesiredValuePreset_M1[20] = {0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000};
-extern int32_t DesiredValuePreset_M2[20] = {10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000};
-extern int32_t DesiredValuePreset_M3[20] = {5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000};
+extern int32_t DesiredValuePreset_M1[20] = {0,200000,0,0,200000,0,0,200000,0,0,200000,0,0,200000,0,0,200000,0,0,200000};
+extern int32_t DesiredValuePreset_M2[20] = {12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000};
+extern int32_t DesiredValuePreset_M3[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 extern int32_t DesiredValuePreset_M4[20] = {0,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0};
