@@ -176,7 +176,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
-uint8_t UserButton = 0;
+uint8_t UserButton = 1;
 uint8_t j = 1;
 // static uint8_t j = 1;를 밖에 빼서 확인용.
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
@@ -327,6 +327,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           ConvFlag[1] = 0;
           ConvFlag[2] = 0;
           ConvFlag[3] = 0;
+          
           if(j<20)
           {
             j++;
