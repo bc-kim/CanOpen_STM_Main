@@ -228,7 +228,23 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             else
             {
               DesiredValue_prev[i - 1] = DesiredValue[i - 1];
-              DesiredValue[i - 1] = motor_[i - 1].DesiredValue[j - 1];
+              if(j==1)
+              {
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[j - 1];
+              }
+              else if(j>1 && j%3 ==1)
+              {
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[4];
+              }
+              else if (j>1 && j%3 == 2)
+              {
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[2];
+              }
+              else if (j > 1 && j % 3 == 0)
+              {
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[3];
+              }
+
 //              DesiredValue_Global[i - 1] = motor_[i - 1].DesiredValue[j - 1];
             }
             motor_[i - 1].PDO_Status = PDO_DV_Updated;
@@ -328,7 +344,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
           ConvFlag[2] = 0;
           ConvFlag[3] = 0;
           
-          if(j<20)
+          if(j<1000)
           {
             j++;
           }

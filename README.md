@@ -2,6 +2,35 @@
 
 ## **Update Log**
 ### **2022.03.22**
+**[2차 완성 Torsion 실험] 커밋**
+
+- 반복구동이 귀찮아서 나머지 이용해서 반복할수 있도록 짜봄.
+
+>>
+if(j==1)
+{
+DesiredValue[i - 1] = motor_[i - 1].DesiredValue[j - 1];
+}
+else if(j>1 && j%3 ==1)
+{
+DesiredValue[i - 1] = motor_[i - 1].DesiredValue[4];
+}
+else if (j>1 && j%3 == 2)
+{
+DesiredValue[i - 1] = motor_[i - 1].DesiredValue[2];
+}
+else if (j > 1 && j % 3 == 0)
+{
+DesiredValue[i - 1] = motor_[i - 1].DesiredValue[3];
+}
+
+extern int32_t DesiredValuePreset_M1[20] = {0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000,0,0,190000};
+extern int32_t DesiredValuePreset_M2[20] = {10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000};
+extern int32_t DesiredValuePreset_M3[20] = {5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000,5000};
+extern int32_t DesiredValuePreset_M4[20] = {0,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0,0,18000,0};
+
+
+### **2022.03.22**
 **[1차 완성 - Power Grasp 실험 - actual grasp도 확인하는] 커밋**
 
 - 잘 구동됨 -> 이걸로 MIFE 자유도 실험 진행했었음.
