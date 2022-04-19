@@ -177,7 +177,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 uint8_t UserButton = 1;
-uint8_t j = 1;
+uint32_t j = 1;
 // static uint8_t j = 1;를 밖에 빼서 확인용.
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
@@ -188,7 +188,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
   static int32_t DesiredValue_prev[4] = {0,0,0,0};
   static uint8_t ConvFlag[4] = {0, 0, 0, 0};
 
-  uint8_t Automotive = 1; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
+  uint8_t Automotive =1; // if automotive is 1, the motor is controlled automatically else the motor is controlled manually.
 
   if (hadc == &hadc1)
   {
@@ -212,9 +212,25 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
         {
           if (motor_[i - 1].PDO_Status == PDO_DV_Sent)
           {
-            // 1.1.1 SetControlMode
             Con_Mode_Prev[i - 1] = Con_Mode[i - 1];
-            Con_Mode[i - 1] = motor_[i - 1].Con_Mode[j - 1];
+            
+            if(j==1)
+              {
+                Con_Mode[i - 1] = motor_[i - 1].Con_Mode[j - 1];
+              }
+              else if(j>1 && j%3 ==1)
+              {
+              Con_Mode[i - 1] = motor_[i - 1].Con_Mode[1];
+              }
+              else if (j>1 && j%3 == 2)
+              {
+              Con_Mode[i - 1] = motor_[i - 1].Con_Mode[2];
+              }
+              else if (j > 1 && j % 3 == 0)
+              {
+              Con_Mode[i - 1] = motor_[i - 1].Con_Mode[3];
+              }
+            // 1.1.1 SetControlMode
             // 1.1.2 SetDesiredValue
             if (Con_Mode[i - 1] == Admittance)
             {
@@ -227,22 +243,25 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
             }
             else
             {
-              DesiredValue_prev[i - 1] = DesiredValue[i - 1];
               if(j==1)
               {
+                DesiredValue_prev[i - 1] = DesiredValue[i - 1];
                 DesiredValue[i - 1] = motor_[i - 1].DesiredValue[j - 1];
               }
               else if(j>1 && j%3 ==1)
               {
-                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[4];
+               DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+               DesiredValue[i - 1] = motor_[i - 1].DesiredValue[3];
               }
               else if (j>1 && j%3 == 2)
               {
-                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[2];
+                DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[1];
               }
               else if (j > 1 && j % 3 == 0)
               {
-                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[3];
+                DesiredValue_prev[i - 1] = DesiredValue[i - 1];
+                DesiredValue[i - 1] = motor_[i - 1].DesiredValue[2];
               }
 
 //              DesiredValue_Global[i - 1] = motor_[i - 1].DesiredValue[j - 1];
